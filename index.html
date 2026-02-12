@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>METR Time Horizons: Data vs Projections</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.15.3/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #12121f; color: #ddd; font-family: Georgia, 'Times New Roman', serif; }
+  .mp .ml { opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+  .mp:hover .ml { opacity: 1; }
+  .mp.al .ml { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useMemo, useState, useRef, useCallback } = React;
+const {
+  ComposedChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ReferenceLine, ResponsiveContainer, Customized,
+} = window.Recharts;
+
+const COL = {
+  anthropic: "#d97757", openai: "#18a683", google: "#4285F4",
+  slow: "#7eb8da", fast: "#f06060",
+};
+const FONT = "Georgia, 'Times New Roman', serif";
+const FONT_D = "'Trebuchet MS', 'Lucida Sans', sans-serif";
+
+// ── Model data from METR benchmark_results v1.1 ──
+// Raw values are in MINUTES; convert to hours (p, lo, hi all /60)
+const M_RAW = [
+  { n: "GPT-2",           d: "2019-02-14", p: 0.040,   lo: 0.002,   hi: 0.130,    s: 1, l: "openai" },
+  { n: "davinci-002",     d: "2020-05-28", p: 0.149,   lo: 0.071,   hi: 0.246,    s: 1, l: "openai" },
+  { n: "GPT-3.5 Instruct",d: "2022-03-15", p: 0.604,   lo: 0.227,   hi: 0.990,   s: 1, l: "openai" },
+  { n: "GPT-4",           d: "2023-03-14", p: 3.525,   lo: 1.540,   hi: 6.797,    s: 1, l: "openai" },
+  { n: "GPT-4 1106",      d: "2023-11-06", p: 3.610,   lo: 1.592,   hi: 7.169,    s: 1, l: "openai" },
+  { n: "GPT-4o",          d: "2024-05-13", p: 6.404,   lo: 3.507,   hi: 12.005,   s: 1, l: "openai" },
+  { n: "Claude 3.5 Sonnet",d: "2024-06-20", p: 10.772, lo: 4.727,   hi: 20.892,   s: 1, l: "anthropic" },
+  { n: "o1-preview",      d: "2024-09-12", p: 19.395,  lo: 11.144,  hi: 32.761,   s: 1, l: "openai" },
+  { n: "Claude 3.5S v2",  d: "2024-10-22", p: 19.776,  lo: 9.669,   hi: 40.168,   s: 1, l: "anthropic" },
+  { n: "o1",              d: "2024-12-05", p: 37.938,   lo: 20.749,  hi: 65.751,   s: 1, l: "openai" },
+  { n: "Claude 3.7",      d: "2025-02-24", p: 59.764,   lo: 32.489,  hi: 103.155, s: 1, l: "anthropic" },
+  { n: "o3",              d: "2025-04-16", p: 120.730,  lo: 73.152,  hi: 201.358,  s: 1, l: "openai" },
+  { n: "GPT-5",           d: "2025-08-07", p: 213.954,  lo: 117.509, hi: 479.894,  s: 1, l: "openai" },
+  { n: "Gemini 3 Pro",    d: "2025-11-18", p: 236.655,  lo: 138.748, hi: 442.590,  s: 1, l: "google" },
+  { n: "Opus 4.5",        d: "2025-11-24", p: 320.422,  lo: 172.952, hi: 734.097,   s: 1, l: "anthropic" },
+  { n: "GPT-5.2",         d: "2025-12-11", p: 394.384,  lo: 197.996, hi: 1042.549,  s: 1, l: "openai" },
+];
+const M = M_RAW.map(m => ({ ...m, p: m.p/60, lo: m.lo/60, hi: m.hi/60 }));
+
+// Models that get permanent labels + offsets
+const LBL = {
+  "GPT-3.5 Instruct": { dx: 8, dy: -8 },
+  "GPT-4":    { dx: 8,  dy: -8 },
+  "GPT-4o":   { dx: 8,  dy: -10 },
+  "o1":       { dx: 8,  dy: -12 },
+  "o3":       { dx: 8,  dy: -10 },
+  "GPT-5":    { dx: 8,  dy: 5 },
+  "Opus 4.5": { dx: -8, dy: -12, a: "end" },
+  "GPT-5.2":  { dx: 8,  dy: 16 },
+};
+
+// ── Fixed-slope fit: force doubling time, optimize intercept ──
+function fitFixed(pts, doublingMonths) {
+  const DM = 86400000; // ms per day
+  const a = Math.LN2 / (doublingMonths * 30.44 * DM); // slope in per-ms
+  // Best intercept for fixed slope: b = mean(log(y) - a*x)
+  let sum = 0;
+  for (const {x,y} of pts) sum += Math.log(y) - a * x;
+  const b = sum / pts.length;
+  return { pred: x => Math.exp(a*x+b), dMo: doublingMonths };
+}
+
+const CS = new Date(2022,0,1).getTime();
+const CE = new Date(2028,0,1).getTime();
+const TODAY = new Date(2026,1,12).getTime();
+const YLO = 0.0001, YHI = 1000;
+
+const MS = [
+  { h: 1/60, lb: "1 minute" }, { h: 1, lb: "1 hour" },
+  { h: 8, lb: "8h (1 day)" }, { h: 40, lb: "40h (1 week)" },
+  { h: 160, lb: "160h (1 month)" }, { h: 480, lb: "480h (3 mo)" },
+];
+
+// Explicit Y-axis ticks at meaningful durations
+const YTICKS = [0.001, 1/60, 0.1, 1, 8, 40, 160, 480];
+const YTICK_LABELS = {
+  0.001: "0.1 min", [1/60]: "1 min", 0.1: "6 min", 1: "1 hour",
+  8: "1 day", 40: "1 week", 160: "1 month", 480: "3 mo",
+};
+const fmtYTick = h => YTICK_LABELS[h] || `${h}h`;
+
+const fmtH = h => {
+  if (h<1/60) return `${(h*60).toFixed(2)} min`;
+  if (h<1) return `${(h*60).toFixed(1)} min`;
+  if (h<8) return `${h.toFixed(1)} hours`;
+  if (h<40) return `${(h/8).toFixed(1)} work days`;
+  if (h<160) return `${(h/40).toFixed(1)} work weeks`;
+  return `${(h/160).toFixed(1)} months`;
+};
+
+function App() {
+  const [extendSlow, setExtendSlow] = useState(false);
+  const [tipState, setTipState] = useState({ model: null, cx: 0, cy: 0, opacity: 0 });
+  const lastTip = useRef(null); // persists content during fadeout
+  const fadeTimer = useRef(null);
+  const dotPositions = useRef([]); // [{m, cx, cy}] updated by Dots renderer
+  const chartRef = useRef(null);
+  if (tipState.model) lastTip.current = tipState;
+
+  const onChartMouseMove = useCallback((e) => {
+    const container = chartRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    let closest = null, bestDist = 18; // 18px hit radius
+    for (const dp of dotPositions.current) {
+      const dist = Math.hypot(dp.cx - mx, dp.cy - my);
+      if (dist < bestDist) { bestDist = dist; closest = dp; }
+    }
+    if (closest) {
+      clearTimeout(fadeTimer.current);
+      setTipState({ model: closest.m, cx: closest.cx, cy: closest.cy, opacity: 1 });
+    } else if (tipState.opacity === 1) {
+      // Mouse moved away from any dot — start fade
+      setTipState(prev => ({ ...prev, opacity: 0 }));
+      fadeTimer.current = setTimeout(() => {
+        setTipState(prev => prev.opacity === 0 ? { ...prev, model: null } : prev);
+      }, 1000);
+    }
+  }, [tipState.opacity]);
+
+  const onChartMouseLeave = useCallback(() => {
+    if (tipState.model) {
+      setTipState(prev => ({ ...prev, opacity: 0 }));
+      fadeTimer.current = setTimeout(() => {
+        setTipState(prev => prev.opacity === 0 ? { ...prev, model: null } : prev);
+      }, 1000);
+    }
+  }, [tipState.model]);
+  const models = useMemo(() => M.map(m => ({...m, ts: new Date(m.d).getTime()})), []);
+
+  const {allFit, recFit} = useMemo(() => {
+    const pre2024 = models.filter(m=>m.s && m.ts < new Date(2024,0,1).getTime());
+    const from2024 = models.filter(m=>m.s && m.ts >= new Date(2024,0,1).getTime());
+    return { allFit: fitFixed(pre2024.map(m=>({x:m.ts, y:m.p})), 7), recFit: fitFixed(from2024.map(m=>({x:m.ts, y:m.p})), 3.5) };
+  }, [models]);
+
+  const CUT = new Date(2024,3,1).getTime(); // era boundary (Apr 2024)
+  const trendData = useMemo(() => {
+    const d = [], step = 7*86400000;
+    for (let t=CS; t<=CE; t+=step) {
+      d.push({
+        ts: t,
+        slow: (extendSlow || t <= CUT) ? allFit.pred(t) : null,
+        fast: t >= CUT ? recFit.pred(t) : null,
+      });
+    }
+    return d;
+  }, [allFit, recFit, extendSlow]);
+
+  const xTicks = useMemo(() => {
+    const t = [];
+    for (let y=2022; y<=2028; y++) { t.push(new Date(y,0,1).getTime()); if(y<2028) t.push(new Date(y,6,1).getTime()); }
+    return t;
+  }, []);
+
+  const fmtDate = ts => {
+    const d=new Date(ts), m=d.getMonth(), y=d.getFullYear();
+    return m===0 ? `${y}` : `Jul '${String(y).slice(2)}`;
+  };
+
+  const Dots = (props) => {
+    const xM=props.xAxisMap, yM=props.yAxisMap;
+    if (!xM||!yM) return null;
+    const xS=xM[Object.keys(xM)[0]]?.scale, yS=yM[Object.keys(yM)[0]]?.scale;
+    if (!xS||!yS) return null;
+    const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
+    // Store pixel positions for mouse proximity detection
+    const positions = [];
+    const els = vis.map(m => {
+      const cx=xS(m.ts), cy=yS(m.p);
+      const ct=yS(Math.min(m.hi,YHI)), cb=yS(Math.max(m.lo,YLO));
+      const c=COL[m.l], lb=LBL[m.n];
+      if (isNaN(cx)||isNaN(cy)) return null;
+      positions.push({m, cx, cy});
+      return (<g key={m.n+m.d} className={`mp${lb?' al':''}`}>
+        <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
+        <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
+        <line x1={cx-3} y1={cb} x2={cx+3} y2={cb} stroke={c} strokeWidth={1} opacity={0.45}/>
+        <circle cx={cx} cy={cy} r={5} fill={c}/>
+        <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
+          fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+      </g>);
+    });
+    dotPositions.current = positions;
+    return <g>{els}</g>;
+  };
+
+  const CTooltip = ({active, payload}) => {
+    if (!active||!payload?.length) return null;
+    const ts=payload[0]?.payload?.ts;
+    if (!ts) return null;
+    const d=new Date(ts);
+    const ds=d.toLocaleString("en-US",{month:"short",year:"numeric"});
+    return (<div style={{background:"#1a1a2e",border:"1px solid #444",borderRadius:6,padding:"8px 12px",fontFamily:FONT,fontSize:12,color:"#ccc"}}>
+      <div style={{fontWeight:700,marginBottom:4}}>{ds}</div>
+      {payload.map(p=>(<div key={p.dataKey} style={{color:p.stroke}}>{p.name}: <b>{fmtH(p.value)}</b></div>))}
+    </div>);
+  };
+
+  const slowLabel = "7-month doubling (all-time trend)";
+  const fastLabel = "3.5-month doubling (2024+ trend)";
+
+  return (
+    <div style={{background:"#12121f",minHeight:"100vh",padding:"32px 24px"}}>
+      <div style={{maxWidth:900,margin:"0 auto"}}>
+        <h1 style={{fontFamily:FONT_D,fontSize:26,fontWeight:700,color:"#eee",marginBottom:4,letterSpacing:"-0.02em"}}>
+          METR Time Horizons: Data vs Trend Projections
+        </h1>
+        <p style={{fontSize:14,color:"#888",marginBottom:20,lineHeight:1.5}}>
+          SOTA model performance (dots with 95% CI) against exponential trend fits.{" "}
+          <span style={{color:COL.openai}}>OpenAI</span>{" / "}
+          <span style={{color:COL.anthropic}}>Anthropic</span>{" / "}
+          <span style={{color:COL.google}}>Google</span>
+        </p>
+
+        <div ref={chartRef} style={{position:"relative"}} onMouseMove={onChartMouseMove} onMouseLeave={onChartMouseLeave}>
+        {lastTip.current && (()=>{
+          const {model:m,cx,cy}=lastTip.current;
+          const d=new Date(m.d);
+          const ds=d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
+          const flipX=cx>600;
+          return (<div style={{position:"absolute",left:flipX?cx-180:cx+20,top:Math.max(10,cy-40),
+            background:"#1a1a2e",border:"1px solid "+COL[m.l],borderRadius:6,padding:"10px 14px",
+            fontFamily:FONT,fontSize:13,color:"#ccc",lineHeight:1.7,pointerEvents:"none",zIndex:10,
+            minWidth:160,opacity:tipState.opacity,transition:"opacity 1s"}}>
+            <div style={{fontWeight:700,color:COL[m.l],marginBottom:2}}>{m.n}</div>
+            <div>{ds}</div>
+            <div>Time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
+            <div style={{fontSize:11,color:"#777",marginTop:4}}>95% CI: {fmtH(m.lo)} – {fmtH(m.hi)}</div>
+          </div>);
+        })()}
+        <ResponsiveContainer width="100%" height={540}>
+          <ComposedChart data={trendData} margin={{top:20,right:90,left:15,bottom:40}}>
+            <CartesianGrid stroke="#2a2a40" strokeDasharray="3 3"/>
+            <XAxis dataKey="ts" type="number" domain={[CS,CE]} ticks={xTicks} tickFormatter={fmtDate}
+              stroke="#666" tick={{fontSize:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}}/>
+            <YAxis scale="log" domain={[YLO,YHI]} allowDataOverflow ticks={YTICKS} tickFormatter={fmtYTick}
+              stroke="#666" tick={{fontSize:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={62}/>
+            {MS.map(m=>(<ReferenceLine key={m.lb} y={m.h} stroke="#333" strokeDasharray="2 4"
+              label={{value:m.lb,position:"right",fill:"#555",fontSize:10,fontFamily:FONT}}/>))}
+            <ReferenceLine x={TODAY} stroke="#f0c050" strokeDasharray="4 4" strokeWidth={1}
+              label={{value:"Today",position:"top",fill:"#f0c050",fontSize:11,fontFamily:FONT_D}}/>
+            <Line dataKey="slow" stroke={COL.slow} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={slowLabel} isAnimationActive={false}/>
+            <Line dataKey="fast" stroke={COL.fast} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={fastLabel} isAnimationActive={false}/>
+            <Customized component={Dots}/>
+            {!tipState.model && <Tooltip content={<CTooltip/>}/>}
+          </ComposedChart>
+        </ResponsiveContainer>
+        </div>
+
+        {/* Custom legend */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
+          {[[COL.slow,slowLabel],[COL.fast,fastLabel]].map(([c,lb])=>(
+            <div key={lb} style={{display:"flex",alignItems:"center",gap:6}}>
+              <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={c} strokeWidth={2} strokeDasharray="6 3"/></svg>
+              {lb}
+            </div>
+          ))}
+          <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+            onClick={()=>setExtendSlow(v=>!v)}>
+            <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.slow,
+              background:extendSlow?COL.slow:"transparent",transition:"background 0.15s"}}/>
+            <span style={{color:extendSlow?"#ccc":"#777",transition:"color 0.15s"}}>Extend 7-mo trend →</span>
+          </div>
+          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google]].map(([lb,c])=>(
+            <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
+              <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
+            </div>
+          ))}
+        </div>
+
+        <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
+          Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-2024 SOTA;
+          3.5-month trend anchored to 2024+ SOTA. Data: METR Horizon v1.1.
+        </p>
+
+        <div style={{marginTop:28,padding:"18px 22px",background:"#1a1a2e",borderRadius:8,borderLeft:"3px solid #f0c050"}}>
+          <h3 style={{fontFamily:FONT_D,fontSize:15,fontWeight:700,color:"#eee",marginBottom:8}}>
+            The data backs the faster trend
+          </h3>
+          <p style={{fontSize:14,lineHeight:1.7,color:"#bbb",margin:0}}>
+            Since mid-2024, SOTA models have consistently tracked or exceeded the faster
+            trendline. Current SOTA models can autonomously handle tasks that take humans
+            about {fmtH(M[M.length-1].p)}. If the 3.5-month doubling pace holds,
+            we should see{" "}
+            <span style={{color:"#f0c050"}}>1-day task horizons</span> by late 2026 and{" "}
+            <span style={{color:"#f0c050"}}>1-week horizons</span> by mid-2027.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
