@@ -153,15 +153,14 @@ function App() {
     return { allFit: fitFixed(pre2024.map(m=>({x:m.ts, y:m.p})), 7), recFit: fitFixed(from2024.map(m=>({x:m.ts, y:m.p})), 3.5) };
   }, [models]);
 
-  const SLOW_END = new Date(2024,0,1).getTime();   // 7-mo trend ends Jan 2024
-  const FAST_START = new Date(2024,3,1).getTime(); // 3.5-mo trend starts Apr 2024
+  const CUT = new Date(2024,10,1).getTime(); // era boundary (Nov 2024)
   const trendData = useMemo(() => {
     const d = [], step = 7*86400000;
     for (let t=CS; t<=CE; t+=step) {
       d.push({
         ts: t,
-        slow: (extendSlow || t <= SLOW_END) ? allFit.pred(t) : null,
-        fast: t >= FAST_START ? recFit.pred(t) : null,
+        slow: (extendSlow || t <= CUT) ? allFit.pred(t) : null,
+        fast: t >= CUT ? recFit.pred(t) : null,
       });
     }
     return d;
