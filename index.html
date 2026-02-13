@@ -153,7 +153,7 @@ function App() {
     return { allFit: fitFixed(pre2024.map(m=>({x:m.ts, y:m.p})), 7), recFit: fitFixed(from2024.map(m=>({x:m.ts, y:m.p})), 3.5) };
   }, [models]);
 
-  const CUT = new Date(2024,10,1).getTime(); // era boundary (Nov 2024)
+  const CUT = new Date(2024,9,1).getTime(); // era boundary (Nov 2024)
   const trendData = useMemo(() => {
     const d = [], step = 7*86400000;
     for (let t=CS; t<=CE; t+=step) {
