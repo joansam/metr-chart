@@ -154,7 +154,7 @@ function App() {
   }, [models]);
 
   const SLOW_END = new Date(2024,0,1).getTime();   // 7-mo trend ends Jan 2024
-  const FAST_START = new Date(2024,3,15).getTime(); // 3.5-mo trend starts mid-Apr 2024
+  const FAST_START = new Date(2024,3,1).getTime(); // 3.5-mo trend starts Apr 2024
   const trendData = useMemo(() => {
     const d = [], step = 7*86400000;
     for (let t=CS; t<=CE; t+=step) {
