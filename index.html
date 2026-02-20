@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>METR Time Horizon Trends</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -142,12 +142,21 @@ function App() {
   const chartRef = useRef(null);
   if (tipState.model) lastTip.current = tipState;
 
+  // ── Mobile detection ──
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   // ── Zoom state ──
   // Store domains: x in ms, y in log-space (ln(hours))
   const [zoom, setZoom] = useState({ x0: CS, x1: CE, ly0: Math.log(YLO), ly1: Math.log(YHI) });
   const isZoomed = zoom.x0 !== CS || zoom.x1 !== CE || zoom.ly0 !== Math.log(YLO) || zoom.ly1 !== Math.log(YHI);
-  const CHART_MARGIN = { top: 20, right: 90, left: 15, bottom: 40 };
-  const YAXIS_W = 62;
+  const CHART_MARGIN = isMobile ? { top: 10, right: 16, left: 2, bottom: 30 } : { top: 20, right: 90, left: 15, bottom: 40 };
+  const YAXIS_W = isMobile ? 44 : 62;
+  const CHART_HEIGHT = isMobile ? 400 : 540;
   const ZOOM_FACTOR = 0.15;
 
   const onWheel = useCallback((e) => {
@@ -159,7 +168,7 @@ function App() {
     const plotLeft = CHART_MARGIN.left + YAXIS_W;
     const plotRight = rect.width - CHART_MARGIN.right;
     const plotTop = CHART_MARGIN.top;
-    const plotBottom = 540 - CHART_MARGIN.bottom;
+    const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
     // Fraction of cursor within plot area
     const fx = Math.max(0, Math.min(1, (mx - plotLeft) / (plotRight - plotLeft)));
@@ -187,7 +196,7 @@ function App() {
       if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
       return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
     });
-  }, []);
+  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT]);
 
   // Attach wheel listener with passive:false to allow preventDefault
   useEffect(() => {
@@ -196,6 +205,76 @@ function App() {
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [onWheel]);
+
+  // ── Pinch-to-zoom for touch devices ──
+  const pinchRef = useRef(null); // { dist, cx, cy }
+  const applyPinchZoom = useCallback((factor, cx, cy) => {
+    const container = chartRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const plotLeft = CHART_MARGIN.left + YAXIS_W;
+    const plotRight = rect.width - CHART_MARGIN.right;
+    const plotTop = CHART_MARGIN.top;
+    const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom;
+    const fx = Math.max(0, Math.min(1, (cx - plotLeft) / (plotRight - plotLeft)));
+    const fy = Math.max(0, Math.min(1, (cy - plotTop) / (plotBottom - plotTop)));
+    setZoom(prev => {
+      const xSpan = prev.x1 - prev.x0;
+      const newXSpan = xSpan * factor;
+      let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
+      let nx1 = nx0 + newXSpan;
+      if (nx0 < CS) { nx0 = CS; nx1 = Math.min(CE, nx0 + newXSpan); }
+      if (nx1 > CE) { nx1 = CE; nx0 = Math.max(CS, nx1 - newXSpan); }
+      if (nx1 - nx0 >= CE - CS) { nx0 = CS; nx1 = CE; }
+      const lySpan = prev.ly1 - prev.ly0;
+      const newLySpan = lySpan * factor;
+      let nly0 = prev.ly0 - (newLySpan - lySpan) * (1 - fy);
+      let nly1 = nly0 + newLySpan;
+      const LY_MIN = Math.log(YLO), LY_MAX = Math.log(YHI);
+      if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = Math.min(LY_MAX, nly0 + newLySpan); }
+      if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = Math.max(LY_MIN, nly1 - newLySpan); }
+      if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
+      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
+    });
+  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT]);
+
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const rect = el.getBoundingClientRect();
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
+        const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
+        pinchRef.current = { dist, cx, cy };
+      }
+    };
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault();
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const rect = el.getBoundingClientRect();
+        const newDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
+        const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
+        const scale = pinchRef.current.dist / newDist; // >1 = pinch in (zoom out), <1 = pinch out (zoom in)
+        applyPinchZoom(scale, cx, cy);
+        pinchRef.current = { dist: newDist, cx, cy };
+      }
+    };
+    const onTouchEnd = () => { pinchRef.current = null; };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [applyPinchZoom]);
 
   const resetZoom = useCallback(() => setZoom({ x0: CS, x1: CE, ly0: Math.log(YLO), ly1: Math.log(YHI) }), []);
 
@@ -316,7 +395,7 @@ function App() {
   const decelLabel = "Slowdown scenario (→7-mo by EOY 2026)";
 
   return (
-    <div style={{background:"#12121f",minHeight:"100vh",padding:"32px 24px"}}>
+    <div style={{background:"#12121f",minHeight:"100vh",padding:isMobile?"16px 6px":"32px 24px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
         <h1 style={{fontFamily:FONT_D,fontSize:26,fontWeight:700,color:"#eee",marginBottom:4,letterSpacing:"-0.02em"}}>
           METR Time Horizon Trends
@@ -339,8 +418,9 @@ function App() {
           const {model:m,cx,cy}=lastTip.current;
           const d=new Date(m.d);
           const ds=d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
-          const flipX=cx>600;
-          return (<div style={{position:"absolute",left:flipX?cx-180:cx+20,top:Math.max(10,cy-40),
+          const containerW = chartRef.current ? chartRef.current.getBoundingClientRect().width : 900;
+          const flipX=cx>containerW*0.6;
+          return (<div style={{position:"absolute",left:flipX?Math.max(4,cx-180):cx+20,top:Math.max(10,cy-40),
             background:"#1a1a2e",border:"1px solid "+COL[m.l],borderRadius:6,padding:"10px 14px",
             fontFamily:FONT,fontSize:13,color:"#ccc",lineHeight:1.7,pointerEvents:"none",zIndex:10,
             minWidth:160,opacity:tipState.opacity,transition:"opacity 1s"}}>
@@ -351,15 +431,15 @@ function App() {
             {!m.s && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not included in trend fits</div>}
           </div>);
         })()}
-        <ResponsiveContainer width="100%" height={540}>
-          <ComposedChart data={trendData} margin={{top:20,right:90,left:15,bottom:40}}>
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <ComposedChart data={trendData} margin={CHART_MARGIN}>
             <CartesianGrid stroke="#2a2a40" strokeDasharray="3 3"/>
             <XAxis dataKey="ts" type="number" domain={xDomain} ticks={xTicks.filter(t=>t>=zoom.x0&&t<=zoom.x1)} tickFormatter={fmtDate}
-              stroke="#666" tick={{fontSize:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} allowDataOverflow/>
+              stroke="#666" tick={{fontSize:isMobile?10:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} allowDataOverflow/>
             <YAxis scale="log" domain={yDomain} allowDataOverflow ticks={YTICKS.filter(t=>t>=yDomain[0]&&t<=yDomain[1])} tickFormatter={fmtYTick}
-              stroke="#666" tick={{fontSize:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={62}/>
+              stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>
             {MS.map(m=>(<ReferenceLine key={m.lb} y={m.h} stroke="#333" strokeDasharray="2 4"
-              label={{value:m.lb,position:"right",fill:"#555",fontSize:10,fontFamily:FONT}}/>))}
+              label={isMobile?false:{value:m.lb,position:"right",fill:"#555",fontSize:10,fontFamily:FONT}}/>))}
             <ReferenceLine x={TODAY} stroke="#f0c050" strokeDasharray="4 4" strokeWidth={1}
               label={{value:"Today",position:"top",fill:"#f0c050",fontSize:11,fontFamily:FONT_D}}/>
             <Line dataKey="slow" stroke={COL.slow} strokeWidth={2} strokeDasharray="8 4"
@@ -372,7 +452,7 @@ function App() {
             {!tipState.model && <Tooltip content={<CTooltip/>}/>}
           </ComposedChart>
         </ResponsiveContainer>
-        {isZoomed && <button onClick={resetZoom} style={{position:"absolute",top:28,right:96,
+        {isZoomed && <button onClick={resetZoom} style={{position:"absolute",top:isMobile?8:28,right:isMobile?20:96,
           background:"#2a2a40",color:"#ccc",border:"1px solid #555",borderRadius:4,padding:"4px 10px",
           fontSize:11,fontFamily:FONT_D,cursor:"pointer",zIndex:5}}>Reset zoom</button>}
         </div>
