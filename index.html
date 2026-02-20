@@ -20,7 +20,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useMemo, useState, useRef, useCallback } = React;
+const { useMemo, useState, useRef, useCallback, useEffect } = React;
 const {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ReferenceLine, ResponsiveContainer, Customized,
@@ -142,6 +142,67 @@ function App() {
   const chartRef = useRef(null);
   if (tipState.model) lastTip.current = tipState;
 
+  // ── Zoom state ──
+  // Store domains: x in ms, y in log-space (ln(hours))
+  const [zoom, setZoom] = useState({ x0: CS, x1: CE, ly0: Math.log(YLO), ly1: Math.log(YHI) });
+  const isZoomed = zoom.x0 !== CS || zoom.x1 !== CE || zoom.ly0 !== Math.log(YLO) || zoom.ly1 !== Math.log(YHI);
+  const CHART_MARGIN = { top: 20, right: 90, left: 15, bottom: 40 };
+  const YAXIS_W = 62;
+  const ZOOM_FACTOR = 0.15;
+
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const container = chartRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    // Chart plot area pixel bounds
+    const plotLeft = CHART_MARGIN.left + YAXIS_W;
+    const plotRight = rect.width - CHART_MARGIN.right;
+    const plotTop = CHART_MARGIN.top;
+    const plotBottom = 540 - CHART_MARGIN.bottom;
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    // Fraction of cursor within plot area
+    const fx = Math.max(0, Math.min(1, (mx - plotLeft) / (plotRight - plotLeft)));
+    const fy = Math.max(0, Math.min(1, (my - plotTop) / (plotBottom - plotTop))); // 0=top, 1=bottom
+    const dir = e.deltaY > 0 ? 1 : -1; // 1=zoom out, -1=zoom in
+    const factor = dir > 0 ? 1 + ZOOM_FACTOR : 1 / (1 + ZOOM_FACTOR);
+    setZoom(prev => {
+      const xSpan = prev.x1 - prev.x0;
+      const newXSpan = xSpan * factor;
+      let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
+      let nx1 = nx0 + newXSpan;
+      // Clamp to max extent
+      if (nx0 < CS) { nx0 = CS; nx1 = Math.min(CE, nx0 + newXSpan); }
+      if (nx1 > CE) { nx1 = CE; nx0 = Math.max(CS, nx1 - newXSpan); }
+      if (nx1 - nx0 >= CE - CS) { nx0 = CS; nx1 = CE; }
+      // Y in log-space: fy=0 is top (high values=ly1), fy=1 is bottom (low values=ly0)
+      const lySpan = prev.ly1 - prev.ly0;
+      const newLySpan = lySpan * factor;
+      // fy=1 (bottom) should anchor near ly0, fy=0 (top) should anchor near ly1
+      let nly0 = prev.ly0 - (newLySpan - lySpan) * (1 - fy);
+      let nly1 = nly0 + newLySpan;
+      const LY_MIN = Math.log(YLO), LY_MAX = Math.log(YHI);
+      if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = Math.min(LY_MAX, nly0 + newLySpan); }
+      if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = Math.max(LY_MIN, nly1 - newLySpan); }
+      if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
+      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
+    });
+  }, []);
+
+  // Attach wheel listener with passive:false to allow preventDefault
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [onWheel]);
+
+  const resetZoom = useCallback(() => setZoom({ x0: CS, x1: CE, ly0: Math.log(YLO), ly1: Math.log(YHI) }), []);
+
+  // Derived domains from zoom state
+  const xDomain = [zoom.x0, zoom.x1];
+  const yDomain = [Math.exp(zoom.ly0), Math.exp(zoom.ly1)];
+
   const onChartMouseMove = useCallback((e) => {
     const container = chartRef.current;
     if (!container) return;
@@ -228,8 +289,8 @@ function App() {
           <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
           <line x1={cx-3} y1={cb} x2={cx+3} y2={cb} stroke={c} strokeWidth={1} opacity={0.45}/>
         </>}
-        <circle cx={cx} cy={cy} r={isOverlay?6:5} fill={isOverlay?"none":c}
-          stroke={isOverlay?c:undefined} strokeWidth={isOverlay?2:undefined} strokeDasharray={isOverlay?"3 2":undefined}/>
+        <circle cx={cx} cy={cy} r={5} fill={isOverlay?"#12121f":c}
+          stroke={isOverlay?c:undefined} strokeWidth={isOverlay?2:undefined}/>
         <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
           fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
       </g>);
@@ -260,6 +321,12 @@ function App() {
         <h1 style={{fontFamily:FONT_D,fontSize:26,fontWeight:700,color:"#eee",marginBottom:4,letterSpacing:"-0.02em"}}>
           METR Time Horizon Trends
         </h1>
+        <p style={{fontSize:13,color:"#777",marginBottom:6,lineHeight:1.5}}>
+          Used in <a href="https://www.lesswrong.com/posts/EYb2K9acKfyG2bome/metr-time-horizons-now-10x-year"
+            style={{color:"#7eb8da",textDecoration:"none"}} target="_blank" rel="noopener noreferrer"
+            onMouseOver={e=>e.target.style.textDecoration="underline"} onMouseOut={e=>e.target.style.textDecoration="none"}
+          >METR Time Horizons: Now 10x/Year</a>
+        </p>
         <p style={{fontSize:14,color:"#888",marginBottom:20,lineHeight:1.5}}>
           SOTA model performance (dots with 95% CI) against exponential trend fits.{" "}
           <span style={{color:COL.openai}}>OpenAI</span>{" / "}
@@ -287,9 +354,9 @@ function App() {
         <ResponsiveContainer width="100%" height={540}>
           <ComposedChart data={trendData} margin={{top:20,right:90,left:15,bottom:40}}>
             <CartesianGrid stroke="#2a2a40" strokeDasharray="3 3"/>
-            <XAxis dataKey="ts" type="number" domain={[CS,CE]} ticks={xTicks} tickFormatter={fmtDate}
-              stroke="#666" tick={{fontSize:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}}/>
-            <YAxis scale="log" domain={[YLO,YHI]} allowDataOverflow ticks={YTICKS} tickFormatter={fmtYTick}
+            <XAxis dataKey="ts" type="number" domain={xDomain} ticks={xTicks.filter(t=>t>=zoom.x0&&t<=zoom.x1)} tickFormatter={fmtDate}
+              stroke="#666" tick={{fontSize:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} allowDataOverflow/>
+            <YAxis scale="log" domain={yDomain} allowDataOverflow ticks={YTICKS.filter(t=>t>=yDomain[0]&&t<=yDomain[1])} tickFormatter={fmtYTick}
               stroke="#666" tick={{fontSize:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={62}/>
             {MS.map(m=>(<ReferenceLine key={m.lb} y={m.h} stroke="#333" strokeDasharray="2 4"
               label={{value:m.lb,position:"right",fill:"#555",fontSize:10,fontFamily:FONT}}/>))}
@@ -305,6 +372,9 @@ function App() {
             {!tipState.model && <Tooltip content={<CTooltip/>}/>}
           </ComposedChart>
         </ResponsiveContainer>
+        {isZoomed && <button onClick={resetZoom} style={{position:"absolute",top:28,right:96,
+          background:"#2a2a40",color:"#ccc",border:"1px solid #555",borderRadius:4,padding:"4px 10px",
+          fontSize:11,fontFamily:FONT_D,cursor:"pointer",zIndex:5}}>Reset zoom</button>}
         </div>
 
         {/* Custom legend */}
