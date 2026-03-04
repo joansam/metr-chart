@@ -36,25 +36,26 @@ const FONT_D = "'Trebuchet MS', 'Lucida Sans', sans-serif";
 // ── Model data from METR benchmark_results v1.1 ──
 // Raw values are in MINUTES; convert to hours (p, lo, hi all /60)
 const M_RAW = [
-  { n: "GPT-2",           d: "2019-02-14", p: 0.040,   lo: 0.002,   hi: 0.130,    s: 1, l: "openai" },
-  { n: "davinci-002",     d: "2020-05-28", p: 0.149,   lo: 0.071,   hi: 0.246,    s: 1, l: "openai" },
-  { n: "GPT-3.5 Instruct",d: "2022-03-15", p: 0.604,   lo: 0.227,   hi: 0.990,   s: 1, l: "openai" },
-  { n: "GPT-4",           d: "2023-03-14", p: 3.525,   lo: 1.540,   hi: 6.797,    s: 1, l: "openai" },
-  { n: "GPT-4 1106",      d: "2023-11-06", p: 3.610,   lo: 1.592,   hi: 7.169,    s: 1, l: "openai" },
-  { n: "GPT-4o",          d: "2024-05-13", p: 6.404,   lo: 3.507,   hi: 12.005,   s: 1, l: "openai" },
-  { n: "Claude 3.5 Sonnet",d: "2024-06-20", p: 10.772, lo: 4.727,   hi: 20.892,   s: 1, l: "anthropic" },
-  { n: "o1-preview",      d: "2024-09-12", p: 19.395,  lo: 11.144,  hi: 32.761,   s: 1, l: "openai" },
-  { n: "Claude 3.5S v2",  d: "2024-10-22", p: 19.776,  lo: 9.669,   hi: 40.168,   s: 1, l: "anthropic" },
-  { n: "o1",              d: "2024-12-05", p: 37.938,   lo: 20.749,  hi: 65.751,   s: 1, l: "openai" },
-  { n: "Claude 3.7",      d: "2025-02-24", p: 59.764,   lo: 32.489,  hi: 103.155, s: 1, l: "anthropic" },
-  { n: "o3",              d: "2025-04-16", p: 120.730,  lo: 73.152,  hi: 201.358,  s: 1, l: "openai" },
-  { n: "GPT-5",           d: "2025-08-07", p: 213.954,  lo: 117.509, hi: 479.894,  s: 1, l: "openai" },
-  { n: "Gemini 3 Pro",    d: "2025-11-18", p: 236.655,  lo: 138.748, hi: 442.590,  s: 1, l: "google" },
-  { n: "Opus 4.5",        d: "2025-11-24", p: 320.422,  lo: 172.952, hi: 734.097,   s: 1, l: "anthropic" },
-  { n: "GPT-5.2",         d: "2025-12-11", p: 394.384,  lo: 197.996, hi: 1042.549,  s: 1, l: "openai" },
-  { n: "Opus 4.6",        d: "2026-02-05", p: 870.027,   lo: 359.749, hi: 5872.007,  s: 0, l: "anthropic" },
+  { n: "GPT-2",           d: "2019-02-14", p: 0.039762,   lo: 0.002019,   hi: 0.130397,    p80: 0.005652,   lo80: 0.000151,   hi80: 0.026215,    s: 1, l: "openai" },
+  { n: "davinci-002",     d: "2020-05-28", p: 0.148793,   lo: 0.07102,    hi: 0.246039,    p80: 0.034139,   lo80: 0.013154,   hi80: 0.062221,    s: 1, l: "openai" },
+  { n: "GPT-3.5 Instruct",d: "2022-03-15", p: 0.604245,   lo: 0.227348,   hi: 0.989884,   p80: 0.1731,     lo80: 0.051881,   hi80: 0.285643,    s: 1, l: "openai" },
+  { n: "GPT-4",           d: "2023-03-14", p: 3.987428,   lo: 1.959555,   hi: 7.906991,    p80: 0.889561,   lo80: 0.353578,   hi80: 2.565517,    s: 1, l: "openai" },
+  { n: "GPT-4 1106",      d: "2023-11-06", p: 4.044959,   lo: 1.952629,   hi: 8.193214,    p80: 0.783032,   lo80: 0.291717,   hi80: 2.334083,    s: 1, l: "openai" },
+  { n: "GPT-4o",          d: "2024-05-13", p: 6.991195,   lo: 3.851599,   hi: 12.414331,   p80: 1.267009,   lo80: 0.551517,   hi80: 2.776774,    s: 1, l: "openai" },
+  { n: "Claude 3.5 Sonnet",d: "2024-06-20", p: 11.395377, lo: 5.441687,   hi: 22.516722,   p80: 1.671757,   lo80: 0.581256,   hi80: 4.498402,    s: 1, l: "anthropic" },
+  { n: "o1-preview",      d: "2024-09-12", p: 20.326586,  lo: 11.61017,   hi: 33.15407,    p80: 4.420545,   lo80: 1.978925,   hi80: 9.245178,    s: 1, l: "openai" },
+  { n: "Claude 3.5S v2",  d: "2024-10-22", p: 20.522872,  lo: 9.874824,   hi: 40.412855,   p80: 2.595677,   lo80: 0.905094,   hi80: 7.247944,    s: 1, l: "anthropic" },
+  { n: "o1",              d: "2024-12-05", p: 38.831588,   lo: 21.687821,  hi: 67.221467,   p80: 7.090121,   lo80: 2.944768,   hi80: 17.338613,   s: 1, l: "openai" },
+  { n: "Claude 3.7",      d: "2025-02-24", p: 60.388937,   lo: 33.385879,  hi: 107.302719, p80: 12.09179,   lo80: 4.538607,   hi80: 29.331824,   s: 1, l: "anthropic" },
+  { n: "o3",              d: "2025-04-16", p: 119.732634,  lo: 72.982684,  hi: 191.583353,  p80: 29.981603,  lo80: 14.925206,  hi80: 56.861131,   s: 1, l: "openai" },
+  { n: "GPT-5",           d: "2025-08-07", p: 203.012577,  lo: 114.211156, hi: 406.743053,  p80: 38.312431,  lo80: 18.558207,  hi80: 70.313466,   s: 1, l: "openai" },
+  { n: "Gemini 3 Pro",    d: "2025-11-18", p: 224.325884,  lo: 136.865815, hi: 387.478199,  p80: 54.142849,  lo80: 26.496334,  hi80: 105.52151,   s: 1, l: "google" },
+  { n: "Opus 4.5",        d: "2025-11-24", p: 292.994594,  lo: 160.539157, hi: 638.619623,  p80: 49.430584,  lo80: 20.878605,  hi80: 104.745812,  s: 1, l: "anthropic" },
+  { n: "GPT-5.2",         d: "2025-12-11", p: 352.249302,  lo: 191.31908,  hi: 862.339204,  p80: 66.002649,  lo80: 32.15869,   hi80: 133.011471,  s: 1, l: "openai" },
+  { n: "Opus 4.6",        d: "2026-02-05", p: 718.80683,   lo: 319.32091,  hi: 3949.750392, p80: 69.874587,  lo80: 26.206972,  hi80: 169.697548,  s: 0, l: "anthropic" },
+  { n: "GPT-5.3 Codex",  d: "2026-02-05", p: 349.530732,  lo: 192.048863, hi: 858.325814,  p80: 54.739407,  lo80: 22.728306,  hi80: 123.217662,  s: 0, l: "openai" },
 ];
-const M = M_RAW.map(m => ({ ...m, p: m.p/60, lo: m.lo/60, hi: m.hi/60 }));
+const M = M_RAW.map(m => ({ ...m, p: m.p/60, lo: m.lo/60, hi: m.hi/60, p80: m.p80/60, lo80: m.lo80/60, hi80: m.hi80/60 }));
 
 // Models that get permanent labels + offsets
 const LBL = {
@@ -67,6 +68,7 @@ const LBL = {
   "Opus 4.5": { dx: -8, dy: -12, a: "end" },
   "GPT-5.2":  { dx: 8,  dy: 16 },
   "Opus 4.6":  { dx: -8, dy: -12, a: "end" },
+  "GPT-5.3 Codex": { dx: 8, dy: 12 },
 };
 
 // ── Fixed-slope fit: force doubling time, optimize intercept ──
@@ -135,6 +137,7 @@ function App() {
   const [extendSlow, setExtendSlow] = useState(false);
   const [showFast, setShowFast] = useState(true);
   const [showDecel, setShowDecel] = useState(true);
+  const [useP80, setUseP80] = useState(false);
   const [tipState, setTipState] = useState({ model: null, cx: 0, cy: 0, opacity: 0 });
   const lastTip = useRef(null); // persists content during fadeout
   const fadeTimer = useRef(null);
@@ -278,11 +281,61 @@ function App() {
 
   const resetZoom = useCallback(() => setZoom({ x0: CS, x1: CE, ly0: Math.log(YLO), ly1: Math.log(YHI) }), []);
 
+  // ── Pan state ──
+  const isPanning = useRef(false);
+  const panStart = useRef({ mx: 0, my: 0, zoom: null });
+
+  const onPanStart = useCallback((e) => {
+    if (!isZoomed) return;
+    isPanning.current = true;
+    panStart.current = { mx: e.clientX, my: e.clientY, zoom: { ...zoom } };
+    e.preventDefault();
+  }, [isZoomed, zoom]);
+
+  const onPanMove = useCallback((e) => {
+    if (!isPanning.current) return;
+    const container = chartRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const plotW = rect.width - CHART_MARGIN.left - YAXIS_W - CHART_MARGIN.right;
+    const plotH = 540 - CHART_MARGIN.top - CHART_MARGIN.bottom;
+    const dx = e.clientX - panStart.current.mx;
+    const dy = e.clientY - panStart.current.my;
+    const prev = panStart.current.zoom;
+    // X pan: pixels to domain units
+    const xSpan = prev.x1 - prev.x0;
+    const xShift = -(dx / plotW) * xSpan;
+    let nx0 = prev.x0 + xShift, nx1 = prev.x1 + xShift;
+    if (nx0 < CS) { nx0 = CS; nx1 = nx0 + xSpan; }
+    if (nx1 > CE) { nx1 = CE; nx0 = nx1 - xSpan; }
+    // Y pan: pixels to log-domain units (dy>0 means mouse moved down = pan to lower values)
+    const lySpan = prev.ly1 - prev.ly0;
+    const lyShift = (dy / plotH) * lySpan;
+    const LY_MIN = Math.log(YLO), LY_MAX = Math.log(YHI);
+    let nly0 = prev.ly0 - lyShift, nly1 = prev.ly1 - lyShift;
+    if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = nly0 + lySpan; }
+    if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = nly1 - lySpan; }
+    setZoom({ x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 });
+  }, []);
+
+  const onPanEnd = useCallback(() => { isPanning.current = false; }, []);
+
+  useEffect(() => {
+    // Attach move/up to window so dragging outside chart still works
+    window.addEventListener("mousemove", onPanMove);
+    window.addEventListener("mouseup", onPanEnd);
+    return () => {
+      window.removeEventListener("mousemove", onPanMove);
+      window.removeEventListener("mouseup", onPanEnd);
+    };
+  }, [onPanMove, onPanEnd]);
+
   // Derived domains from zoom state
   const xDomain = [zoom.x0, zoom.x1];
   const yDomain = [Math.exp(zoom.ly0), Math.exp(zoom.ly1)];
 
   const onChartMouseMove = useCallback((e) => {
+    if (isPanning.current) return;
     const container = chartRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -312,12 +365,17 @@ function App() {
       }, 1000);
     }
   }, [tipState.model]);
-  const models = useMemo(() => M.map(m => ({...m, ts: new Date(m.d).getTime()})), []);
+  const models = useMemo(() => M.map(m => {
+    const ts = new Date(m.d).getTime();
+    if (useP80) return { ...m, ts, p: m.p80, lo: m.lo80, hi: m.hi80 };
+    return { ...m, ts };
+  }), [useP80]);
 
   const {allFit, recFit} = useMemo(() => {
-    const pre2024 = models.filter(m=>m.s && m.ts < new Date(2024,0,1).getTime());
-    const from2024 = models.filter(m=>m.s && m.ts >= new Date(2024,0,1).getTime());
-    return { allFit: fitFixed(pre2024.map(m=>({x:m.ts, y:m.p})), 7), recFit: fitFixed(from2024.map(m=>({x:m.ts, y:m.p})), 3.5) };
+    const slowCut = new Date(2024,5,1).getTime(); // Jun 1 2024: GPT-4o (May 13) → slow, Claude 3.5 Sonnet (Jun 20) → fast
+    const slowPts = models.filter(m=>m.s && m.ts < slowCut);
+    const fastPts = models.filter(m=>m.s && m.ts >= slowCut);
+    return { allFit: fitFixed(slowPts.map(m=>({x:m.ts, y:m.p})), 7), recFit: fitFixed(fastPts.map(m=>({x:m.ts, y:m.p})), 3.5) };
   }, [models]);
 
   const CUT = new Date(2024,8,11).getTime(); // era boundary (o1-preview, Sep 11 2024)
@@ -413,7 +471,7 @@ function App() {
           <span style={{color:COL.google}}>Google</span>
         </p>
 
-        <div ref={chartRef} style={{position:"relative"}} onMouseMove={onChartMouseMove} onMouseLeave={onChartMouseLeave}>
+        <div ref={chartRef} style={{position:"relative",cursor:isZoomed?"grab":"default"}} onMouseDown={onPanStart} onMouseMove={onChartMouseMove} onMouseLeave={onChartMouseLeave}>
         {lastTip.current && (()=>{
           const {model:m,cx,cy}=lastTip.current;
           const d=new Date(m.d);
@@ -426,7 +484,7 @@ function App() {
             minWidth:160,opacity:tipState.opacity,transition:"opacity 1s"}}>
             <div style={{fontWeight:700,color:COL[m.l],marginBottom:2}}>{m.n}</div>
             <div>{ds}</div>
-            <div>Time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
+            <div>{useP80?"p80":"p50"} time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
             {m.lo != null && m.hi != null && <div style={{fontSize:11,color:"#777",marginTop:4}}>95% CI: {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
             {!m.s && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not included in trend fits</div>}
           </div>);
@@ -483,6 +541,12 @@ function App() {
               background:showDecel?COL.decel:"transparent",transition:"background 0.15s"}}/>
             <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>2026 slowdown</span>
           </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+            onClick={()=>setUseP80(v=>!v)}>
+            <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid #f0c050",
+              background:useP80?"#f0c050":"transparent",transition:"background 0.15s"}}/>
+            <span style={{color:useP80?"#ccc":"#777",transition:"color 0.15s"}}>Show p80 (harder tasks)</span>
+          </div>
           {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
@@ -491,8 +555,8 @@ function App() {
         </div>
 
         <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
-          Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-2024 SOTA;
-          3.5-month trend anchored to 2024+ SOTA. Data: METR Horizon v1.1.
+          Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-mid-2024 SOTA;
+          3.5-month trend anchored to mid-2024+ reasoning-era SOTA. Data: METR Horizon v1.1.
         </p>
 
         <div style={{marginTop:28,padding:"18px 22px",background:"#1a1a2e",borderRadius:8,borderLeft:"3px solid #f0c050"}}>
