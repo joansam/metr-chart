@@ -16,10 +16,10 @@ Data sources:
       Epoch AI's Benchmarking Hub (https://epoch.ai/benchmarks, CC-BY 4.0).
       METR Time Horizons is NOT among the benchmarks that feed the ECI, so
       fit 2 is not circular.
-    - AECI: Barry's extraction from the Opus 4.8 system card chart (his
-      May 29 2026 post). PROVISIONAL - Anthropic recalculate AECI values at
-      each release; swap in the Fable/Mythos 5 system card values when we
-      have them.
+    - AECI: analysis/data/aeci_fable5_systemcard.csv - Barry's extraction
+      from the Fable/Mythos 5 system card chart (Datawrapper dataset behind
+      his Jun 20 2026 post). Anthropic recalculate AECI values at each
+      release; this is the current vintage.
 
 Usage:
     python analysis/eci_conversions.py               # print fits + tables
@@ -37,42 +37,39 @@ from scipy import stats
 HERE = os.path.dirname(os.path.abspath(__file__))
 METR_YAML = os.path.join(HERE, "..", "benchmark_results_1_1 (5).yaml")
 ECI_CSV = os.path.join(HERE, "data", "epoch_capabilities_index.csv")
+AECI_CSV = os.path.join(HERE, "data", "aeci_fable5_systemcard.csv")
 
-# display name -> (metr_yaml_key, eci_model_version, aeci, lab)
-# None means the model lacks that value. AECI values are Claude-only (internal
-# Anthropic index, from the Opus 4.8 system card via Barry's post).
+# display name (must match the AECI csv) -> (metr_yaml_key, eci_model_version, lab)
+# None means the model lacks that value.
 MODELS = {
-    "Claude 3 Opus":           ("claude_3_opus_inspect",              "claude-3-opus-20240229",     126.0, "anthropic"),
-    "Claude 3.5 Sonnet":       ("claude_3_5_sonnet_20240620_inspect", "claude-3-5-sonnet-20240620", 130.0, "anthropic"),
-    "Claude 3.5 Sonnet (new)": ("claude_3_5_sonnet_20241022_inspect", "claude-3-5-sonnet-20241022", 132.9, "anthropic"),
-    "Claude 3.7 Sonnet":       ("claude_3_7_sonnet_inspect",          "claude-3-7-sonnet-20250219", 139.4, "anthropic"),
-    "Claude Opus 4":           ("claude_4_opus_inspect",              "claude-opus-4-20250514",     141.8, "anthropic"),
-    "Claude Opus 4.1":         ("claude_4_1_opus_inspect",            "claude-opus-4-1-20250805",   None,  "anthropic"),
-    "Claude Sonnet 4.5":       (None,                                 "claude-sonnet-4-5-20250929", 145.5, "anthropic"),
-    "Claude Opus 4.5":         ("claude_opus_4_5_inspect",            "claude-opus-4-5-20251101",   149.1, "anthropic"),
-    "Claude Opus 4.6":         ("claude_opus_4_6_inspect",            "claude-opus-4-6",            152.3, "anthropic"),
-    "Claude Opus 4.7":         (None,                                 "claude-opus-4-7",            154.1, "anthropic"),
-    "Claude Opus 4.8":         (None,                                 "claude-opus-4-8",            155.5, "anthropic"),
-    "Claude Mythos Preview":   (None,                                 None,                         158.3, "anthropic"),
-    "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 None,  "openai"),
-    "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     None,  "openai"),
-    "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          None,  "openai"),
-    "o1-preview":              ("o1_preview",                         "o1-preview-2024-09-12",      None,  "openai"),
-    "o1":                      ("o1_inspect",                         "o1-2024-12-17",              None,  "openai"),
-    "o3":                      ("o3_inspect",                         "o3-2025-04-16",              None,  "openai"),
-    "GPT-5":                   ("gpt_5_2025_08_07_inspect",           "gpt-5-2025-08-07",           None,  "openai"),
-    "GPT-5.2":                 ("gpt_5_2",                            "gpt-5.2-2025-12-11",         None,  "openai"),
-    "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "gpt-5.3-codex",              None,  "openai"),
-    "GPT-5.4":                 ("gpt_5_4",                            "gpt-5.4-2026-03-05",         None,  "openai"),
-    "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       None,  "google"),
-    "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     None,  "google"),
+    "Claude 3 Opus":           ("claude_3_opus_inspect",              "claude-3-opus-20240229",     "anthropic"),
+    "Claude 3.5 Sonnet":       ("claude_3_5_sonnet_20240620_inspect", "claude-3-5-sonnet-20240620", "anthropic"),
+    "Claude 3.5 Sonnet (new)": ("claude_3_5_sonnet_20241022_inspect", "claude-3-5-sonnet-20241022", "anthropic"),
+    "Claude 3.7 Sonnet":       ("claude_3_7_sonnet_inspect",          "claude-3-7-sonnet-20250219", "anthropic"),
+    "Claude Opus 4":           ("claude_4_opus_inspect",              "claude-opus-4-20250514",     "anthropic"),
+    "Claude Opus 4.1":         ("claude_4_1_opus_inspect",            "claude-opus-4-1-20250805",   "anthropic"),
+    "Claude Sonnet 4.5":       (None,                                 "claude-sonnet-4-5-20250929", "anthropic"),
+    "Claude Opus 4.5":         ("claude_opus_4_5_inspect",            "claude-opus-4-5-20251101",   "anthropic"),
+    "Claude Opus 4.6":         ("claude_opus_4_6_inspect",            "claude-opus-4-6",            "anthropic"),
+    "Claude Opus 4.7":         (None,                                 "claude-opus-4-7",            "anthropic"),
+    "Claude Opus 4.8":         (None,                                 "claude-opus-4-8",            "anthropic"),
+    # April 7 early checkpoint has a METR result; the AECI/ECI rows describe
+    # the April 7 launch and June 9 release respectively, so no METR key here.
+    "Claude Mythos Preview":   (None,                                 None,                         "anthropic"),
+    "Claude Mythos/Fable 5":   (None,                                 "claude-fable-5",             "anthropic"),
+    "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
+    "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
+    "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
+    "o1-preview":              ("o1_preview",                         "o1-preview-2024-09-12",      "openai"),
+    "o1":                      ("o1_inspect",                         "o1-2024-12-17",              "openai"),
+    "o3":                      ("o3_inspect",                         "o3-2025-04-16",              "openai"),
+    "GPT-5":                   ("gpt_5_2025_08_07_inspect",           "gpt-5-2025-08-07",           "openai"),
+    "GPT-5.2":                 ("gpt_5_2",                            "gpt-5.2-2025-12-11",         "openai"),
+    "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "gpt-5.3-codex",              "openai"),
+    "GPT-5.4":                 ("gpt_5_4",                            "gpt-5.4-2026-03-05",         "openai"),
+    "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
+    "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
 }
-
-# Excluded from the ECI->AECI fit but interesting as a check: Barry treats
-# "Claude Mythos Preview" (April 7 launch AECI 158.3) as its own model; Epoch
-# scores the June 9 release as claude-fable-5. Same underlying model per
-# Anthropic, different snapshots/dates, so we don't assert the pairing.
-FABLE_5_ECI_KEY = "claude-fable-5"
 
 
 def load_metr(path=METR_YAML):
@@ -140,13 +137,20 @@ def lin_fit(x, y):
             "r2": res.rvalue ** 2, "n": len(x)}
 
 
+def load_aeci(path=AECI_CSV):
+    """display name -> AECI point estimate."""
+    return {r["model"]: float(r["aeci"])
+            for r in csv.DictReader(open(path, encoding="utf-8"))}
+
+
 def assemble():
-    metr, eci = load_metr(), load_eci()
+    metr, eci, aeci = load_metr(), load_eci(), load_aeci()
     rows = []
-    for name, (mkey, ekey, aeci, lab) in MODELS.items():
+    for name, (mkey, ekey, lab) in MODELS.items():
         p50, p80 = metr.get(mkey, (None, None)) if mkey else (None, None)
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
-                     "eci": eci.get(ekey) if ekey else None, "aeci": aeci})
+                     "eci": eci.get(ekey) if ekey else None,
+                     "aeci": aeci.get(name)})
     return rows, eci
 
 
@@ -208,11 +212,8 @@ def report(rows, fits, eci_all):
         print(f"{r['name']:24s} {eci_s} {aeci_s} | "
               f"{cell(r['p50'])} {p50e} {p50a:>8s} | {cell(r['p80'])} {p80e} {p80a:>8s}")
 
-    fable = eci_all.get(FABLE_5_ECI_KEY)
-    if fable:
-        pred_aeci = fits["eci_aeci"]["predict"](fable)
-        print(f"\nCheck: Fable 5 public ECI {fable} -> implied AECI {pred_aeci:.1f} "
-              f"(Barry's Mythos Preview launch AECI: 158.3)")
+    print("\nBarry's Jun 20 post predictions to reproduce: "
+          "Mythos/Fable 5 p50 61.3 h, p80 8.2 h")
 
 
 def convert(fits, eci=None, aeci=None, lab=None):
