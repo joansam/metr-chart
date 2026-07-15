@@ -25,11 +25,22 @@ Usage:
     python analysis/eci_conversions.py               # print fits + tables
     python analysis/eci_conversions.py --eci 160.4   # convert a new model
     python analysis/eci_conversions.py --aeci 158.3
+
+Sensitivity switches (affect the ECI fits, mirroring Barry's Apr 30 post):
+    --drop-reward-hacked   exclude GPT-5.3 Codex / GPT-5.4, whose METR
+                           horizons were depressed by reward-hacking attempts
+    --with-gpt35           add GPT-3.5 Instruct at ECI 119 (Epoch's
+                           back-extension of the index to earlier LLMs)
+
+Chart integration (same pattern as gen_model_data.py):
+    --emit-js              print the PRED_RAW array for index.html
+    --check-html           verify index.html's PRED_RAW matches the fits
 """
 import argparse
 import csv
 import os
 import re
+import sys
 
 import numpy as np
 from scipy import stats
@@ -70,6 +81,24 @@ MODELS = {
     "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
     "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
 }
+
+# Sensitivity-analysis inputs (see Barry's Apr 30 post). GPT-3.5's ECI comes
+# from Epoch's back-extension of the index; it is blank in the main CSV.
+REWARD_HACKED = ("GPT-5.3 Codex", "GPT-5.4")
+GPT35 = {"name": "GPT-3.5 Instruct", "metr_key": "gpt_3_5_turbo_instruct",
+         "eci": 119.0, "lab": "openai"}
+
+# Models with an AECI but no METR run: these get plotted in index.html as
+# predictions from the AECI fit. Release dates from Epoch's CSV / system cards
+# (Mythos Preview = the April 7 launch version, not METR's early checkpoint).
+PREDICTED_DATES = {
+    "Claude Sonnet 4.5":     "2025-09-29",
+    "Claude Opus 4.7":       "2026-04-16",
+    "Claude Opus 4.8":       "2026-05-28",
+    "Claude Mythos Preview": "2026-04-07",
+    "Claude Mythos/Fable 5": "2026-06-09",
+}
+HTML = os.path.join(HERE, "..", "index.html")
 
 
 def load_metr(path=METR_YAML):
@@ -143,7 +172,7 @@ def load_aeci(path=AECI_CSV):
             for r in csv.DictReader(open(path, encoding="utf-8"))}
 
 
-def assemble():
+def assemble(with_gpt35=False):
     metr, eci, aeci = load_metr(), load_eci(), load_aeci()
     rows = []
     for name, (mkey, ekey, lab) in MODELS.items():
@@ -151,20 +180,73 @@ def assemble():
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
                      "eci": eci.get(ekey) if ekey else None,
                      "aeci": aeci.get(name)})
+    if with_gpt35:
+        p50, p80 = metr[GPT35["metr_key"]]
+        rows.insert(0, {"name": GPT35["name"], "p50": p50, "p80": p80,
+                        "lab": GPT35["lab"], "eci": GPT35["eci"], "aeci": None})
     return rows, eci
 
 
-def build_fits(rows):
+def build_fits(rows, drop=()):
+    """drop: model names excluded from the ECI fits (the AECI fit is Barry's
+    Claude-only regression and is never affected by the switches)."""
     fits = {}
     for m in ("p50", "p80"):
         a = [(r["aeci"], r[m]) for r in rows if r["aeci"] and r[m]]
-        e = [(r["eci"], r[m], r["lab"]) for r in rows if r["eci"] and r[m]]
+        e = [(r["eci"], r[m], r["lab"]) for r in rows
+             if r["eci"] and r[m] and r["name"] not in drop]
         fits[f"aeci_{m}"] = loglin_fit(*zip(*a))
         fits[f"eci_{m}"] = loglin_fit(*[[t[i] for t in e] for i in (0, 1)])
         fits[f"eci_{m}_lab"] = ancova_fit(*zip(*e))
     pairs = [(r["eci"], r["aeci"]) for r in rows if r["eci"] and r["aeci"]]
     fits["eci_aeci"] = lin_fit(*zip(*pairs))
     return fits
+
+
+def predicted_rows(rows, fits):
+    """Chart rows for models with an AECI but no METR result, predicted from
+    the AECI fit. Values in minutes, matching M_RAW in index.html."""
+    out = []
+    for r in rows:
+        if r["aeci"] is None or r["p50"] is not None:
+            continue
+        out.append({"n": r["name"].replace("Claude ", ""),
+                    "d": PREDICTED_DATES[r["name"]], "aeci": r["aeci"],
+                    "p": fits["aeci_p50"]["predict"](r["aeci"]),
+                    "p80": fits["aeci_p80"]["predict"](r["aeci"]),
+                    "l": r["lab"]})
+    out.sort(key=lambda r: r["d"])
+    return out
+
+
+def emit_js(preds):
+    lines = ["const PRED_RAW = ["]
+    for r in preds:
+        lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":18} d: "{r["d"]}", '
+                     f'aeci: {r["aeci"]}, p: {r["p"]:.6f}, p80: {r["p80"]:.6f}, '
+                     f'l: "{r["l"]}" }},')
+    lines.append("];")
+    return "\n".join(lines)
+
+
+def check_html(preds):
+    html = open(HTML, encoding="utf-8").read()
+    ok = True
+    for r in preds:
+        m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
+                      r'aeci:\s*([\d.]+),\s*p:\s*([\d.]+),\s*p80:\s*([\d.]+)', html)
+        if not m:
+            print(f"[MISSING] {r['n']}")
+            ok = False
+            continue
+        want = [r["d"], r["aeci"], r["p"], r["p80"]]
+        got = [m.group(1), *map(float, m.groups()[1:])]
+        for w, g in zip(want, got):
+            if (w != g) if isinstance(w, str) else abs(w - g) > 1e-4 * max(1, abs(w)):
+                print(f"[DIFF] {r['n']}: {w} != {g}")
+                ok = False
+    print("OK: index.html PRED_RAW matches fits" if ok else "*** MISMATCH ***")
+    return ok
 
 
 def hours(minutes):
@@ -238,13 +320,32 @@ def main():
     ap.add_argument("--aeci", type=float, help="Anthropic internal ECI of a model")
     ap.add_argument("--lab", choices=["anthropic", "openai", "google"],
                     help="also show the lab-adjusted ECI fit for this lab")
+    ap.add_argument("--drop-reward-hacked", action="store_true",
+                    help="exclude GPT-5.3 Codex / GPT-5.4 from the ECI fits")
+    ap.add_argument("--with-gpt35", action="store_true",
+                    help="add GPT-3.5 Instruct at ECI 119 to the ECI fits")
+    ap.add_argument("--emit-js", action="store_true",
+                    help="print PRED_RAW array for index.html")
+    ap.add_argument("--check-html", action="store_true",
+                    help="verify index.html PRED_RAW matches the fits")
     args = ap.parse_args()
 
-    rows, eci_all = assemble()
-    fits = build_fits(rows)
-    if args.eci is not None or args.aeci is not None:
+    rows, eci_all = assemble(with_gpt35=args.with_gpt35)
+    drop = REWARD_HACKED if args.drop_reward_hacked else ()
+    fits = build_fits(rows, drop=drop)
+    if args.emit_js or args.check_html:
+        preds = predicted_rows(rows, fits)
+        if args.emit_js:
+            print(emit_js(preds))
+        if args.check_html:
+            sys.exit(0 if check_html(preds) else 1)
+    elif args.eci is not None or args.aeci is not None:
         convert(fits, args.eci, args.aeci, args.lab)
     else:
+        if drop:
+            print(f"[sensitivity] ECI fits exclude: {', '.join(drop)}")
+        if args.with_gpt35:
+            print(f"[sensitivity] ECI fits include {GPT35['name']} at ECI {GPT35['eci']}")
         report(rows, fits, eci_all)
 
 
