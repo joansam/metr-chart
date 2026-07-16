@@ -64,10 +64,15 @@ MODELS = {
     "Claude Opus 4.6":         ("claude_opus_4_6_inspect",            "claude-opus-4-6",            "anthropic"),
     "Claude Opus 4.7":         (None,                                 "claude-opus-4-7",            "anthropic"),
     "Claude Opus 4.8":         (None,                                 "claude-opus-4-8",            "anthropic"),
-    # April 7 early checkpoint has a METR result; the AECI/ECI rows describe
-    # the April 7 launch and June 9 release respectively, so no METR key here.
+    # METR's Mythos Preview result is the Feb/Mar early checkpoint; the AECI
+    # row describes the April 7 launch version, so no METR key here.
     "Claude Mythos Preview":   (None,                                 None,                         "anthropic"),
-    "Claude Mythos/Fable 5":   (None,                                 "claude-fable-5",             "anthropic"),
+    # Mythos 5 and Fable 5 share an underlying model but are different
+    # deployment variants: the system card's AECI point is labelled Mythos 5,
+    # while Epoch measured the GA Fable 5. Kept as separate rows so the
+    # cross-variant pair never enters the ECI->AECI fit.
+    "Claude Mythos 5":         (None,                                 None,                         "anthropic"),
+    "Claude Fable 5":          (None,                                 "claude-fable-5",             "anthropic"),
     "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
     "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
     "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
@@ -88,15 +93,20 @@ REWARD_HACKED = ("GPT-5.3 Codex", "GPT-5.4")
 GPT35 = {"name": "GPT-3.5 Instruct", "metr_key": "gpt_3_5_turbo_instruct",
          "eci": 119.0, "lab": "openai"}
 
-# Models with an AECI but no METR run: these get plotted in index.html as
-# predictions from the AECI fit. Release dates from Epoch's CSV / system cards
-# (Mythos Preview = the April 7 launch version, not METR's early checkpoint).
+# Barry's AECI CSV uses his combined "Mythos/Fable 5" label for the system
+# card point; per the card itself that point is Mythos 5.
+AECI_ALIASES = {"Claude Mythos 5": "Claude Mythos/Fable 5"}
+
+# Models without a METR run that get plotted in index.html as predictions.
+# Release dates from Epoch's CSV / system cards (Mythos Preview = the April 7
+# launch version, not METR's early checkpoint).
 PREDICTED_DATES = {
     "Claude Sonnet 4.5":     "2025-09-29",
     "Claude Opus 4.7":       "2026-04-16",
     "Claude Opus 4.8":       "2026-05-28",
     "Claude Mythos Preview": "2026-04-07",
-    "Claude Mythos/Fable 5": "2026-06-09",
+    "Claude Mythos 5":       "2026-06-09",
+    "Claude Fable 5":        "2026-06-09",
 }
 HTML = os.path.join(HERE, "..", "index.html")
 
@@ -179,7 +189,7 @@ def assemble(with_gpt35=False):
         p50, p80 = metr.get(mkey, (None, None)) if mkey else (None, None)
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
                      "eci": eci.get(ekey) if ekey else None,
-                     "aeci": aeci.get(name)})
+                     "aeci": aeci.get(AECI_ALIASES.get(name, name))})
     if with_gpt35:
         p50, p80 = metr[GPT35["metr_key"]]
         rows.insert(0, {"name": GPT35["name"], "p50": p50, "p80": p80,
@@ -204,18 +214,27 @@ def build_fits(rows, drop=()):
 
 
 def predicted_rows(rows, fits):
-    """Chart rows for models with an AECI but no METR result, predicted from
-    the AECI fit. Values in minutes, matching M_RAW in index.html."""
+    """Chart rows for models in PREDICTED_DATES (no METR result), predicted
+    from the AECI fit. Models with only a public ECI (Fable 5) go through the
+    ECI->AECI conversion first; `basis` records which route was used.
+    Values in minutes, matching M_RAW in index.html."""
     out = []
     for r in rows:
-        if r["aeci"] is None or r["p50"] is not None:
+        if r["p50"] is not None or r["name"] not in PREDICTED_DATES:
+            continue
+        if r["aeci"] is not None:
+            aeci, basis = r["aeci"], f"AECI {r['aeci']}"
+        elif r["eci"] is not None:
+            aeci = fits["eci_aeci"]["predict"](r["eci"])
+            basis = f"ECI {r['eci']} (implied AECI {aeci:.1f})"
+        else:
             continue
         out.append({"n": r["name"].replace("Claude ", ""),
-                    "d": PREDICTED_DATES[r["name"]], "aeci": r["aeci"],
-                    "p": fits["aeci_p50"]["predict"](r["aeci"]),
-                    "p80": fits["aeci_p80"]["predict"](r["aeci"]),
+                    "d": PREDICTED_DATES[r["name"]], "basis": basis,
+                    "p": fits["aeci_p50"]["predict"](aeci),
+                    "p80": fits["aeci_p80"]["predict"](aeci),
                     "l": r["lab"]})
-    out.sort(key=lambda r: r["d"])
+    out.sort(key=lambda r: (r["d"], r["n"]))
     return out
 
 
@@ -223,7 +242,7 @@ def emit_js(preds):
     lines = ["const PRED_RAW = ["]
     for r in preds:
         lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":18} d: "{r["d"]}", '
-                     f'aeci: {r["aeci"]}, p: {r["p"]:.6f}, p80: {r["p80"]:.6f}, '
+                     f'basis: "{r["basis"]}", p: {r["p"]:.6f}, p80: {r["p80"]:.6f}, '
                      f'l: "{r["l"]}" }},')
     lines.append("];")
     return "\n".join(lines)
@@ -234,13 +253,13 @@ def check_html(preds):
     ok = True
     for r in preds:
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
-                      r'aeci:\s*([\d.]+),\s*p:\s*([\d.]+),\s*p80:\s*([\d.]+)', html)
+                      r'basis:\s*"([^"]*)",\s*p:\s*([\d.]+),\s*p80:\s*([\d.]+)', html)
         if not m:
             print(f"[MISSING] {r['n']}")
             ok = False
             continue
-        want = [r["d"], r["aeci"], r["p"], r["p80"]]
-        got = [m.group(1), *map(float, m.groups()[1:])]
+        want = [r["d"], r["basis"], r["p"], r["p80"]]
+        got = [m.group(1), m.group(2), *map(float, m.groups()[2:])]
         for w, g in zip(want, got):
             if (w != g) if isinstance(w, str) else abs(w - g) > 1e-4 * max(1, abs(w)):
                 print(f"[DIFF] {r['n']}: {w} != {g}")
@@ -294,8 +313,17 @@ def report(rows, fits, eci_all):
         print(f"{r['name']:24s} {eci_s} {aeci_s} | "
               f"{cell(r['p50'])} {p50e} {p50a:>8s} | {cell(r['p80'])} {p80e} {p80a:>8s}")
 
-    print("\nBarry's Jun 20 post predictions to reproduce: "
-          "Mythos/Fable 5 p50 61.3 h, p80 8.2 h")
+    print("\n=== Cross-index imputation (models with only one index) ===")
+    f = fits["eci_aeci"]
+    for r in rows:
+        if r["lab"] != "anthropic" or (r["eci"] is None) == (r["aeci"] is None):
+            continue
+        if r["aeci"] is not None:
+            print(f"{r['name']:24s} AECI {r['aeci']:6.1f} -> implied public ECI {f['invert'](r['aeci']):6.2f}")
+        else:
+            print(f"{r['name']:24s} ECI  {r['eci']:6.2f} -> implied AECI {f['predict'](r['eci']):6.1f}")
+    print("\nBarry's Jun 20 post predictions to reproduce (his 'Mythos/Fable 5'"
+          " = the system card's Mythos 5): p50 61.3 h, p80 8.2 h")
 
 
 def convert(fits, eci=None, aeci=None, lab=None):
