@@ -291,9 +291,17 @@ def idx_rows(rows, fits):
         if eci is None and aeci is None:
             if r["p50"] is None:
                 continue
-            th = fits["eci_p50"]
-            eci = round((np.log(r["p50"]) - th["intercept"]) / th["slope"], 2)
-            aeci = round(f["predict"](eci), 2)
+            # Invert the lab-appropriate fit (mirroring the prediction routes):
+            # the pooled fit would inflate Claude scores, since Anthropic
+            # models sit above the cross-lab TH-per-point line.
+            if r["lab"] == "anthropic":
+                a = fits["aeci_p50"]
+                aeci = round((np.log(r["p50"]) - a["intercept"]) / a["slope"], 2)
+                eci = round(f["invert"](aeci), 2)
+            else:
+                th = fits["eci_p50_lab"]
+                eci = round((np.log(r["p50"]) - th["intercepts"][r["lab"]]) / th["slope"], 2)
+                aeci = round(f["predict"](eci), 2)
             est = True
         elif eci is None:
             eci, eci_imp = round(f["invert"](aeci), 2), True

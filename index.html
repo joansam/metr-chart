@@ -110,7 +110,7 @@ const PRED_BASES = {
 const IDX_RAW = [
   { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
   { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
-  { n: "GPT-4 1106",          d: "2023-11-06", eci: 125.54, aeci: 125.04, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
+  { n: "GPT-4 1106",          d: "2023-11-06", eci: 127.02, aeci: 126.46, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
   { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, aeciLo: 123.9, aeciHi: 126.8, p50: 3.952262, p80: 0.638973, l: "anthropic" },
   { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
   { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
@@ -125,13 +125,13 @@ const IDX_RAW = [
   { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
   { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, aeciLo: 144.3, aeciHi: 148.2, l: "anthropic" },
   { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
-  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 150.83, aeci: 149.39, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
+  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 151.57, aeci: 150.1, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
   { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, aeciLo: 146.7, aeciHi: 150.7, p50: 292.994594, p80: 49.430584, l: "anthropic" },
   { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
   { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
   { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, aeciLo: 150.4, aeciHi: 155.3, p50: 718.80683, p80: 69.874587, l: "anthropic" },
   { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
-  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 160.54, aeci: 158.74, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
+  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 156.28, aeci: 154.63, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
   { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
   { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
   { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
@@ -187,10 +187,9 @@ const LBL = {
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
 };
-// Permanent labels suppressed per view where they'd collide; the other view
-// still shows them.
+// Permanent labels suppressed in the (crowded) time-horizon view only;
+// score modes still show them.
 const LBL_TH_HIDE = new Set(["Fable 5", "GPT-5.6 Sol", "GPT-5.3 Codex"]);
-const LBL_SC_HIDE = new Set(["Mythos Preview (Early)"]); // sits on top of Mythos Preview in score space
 
 // ── Trend fits ──
 const DAY_MS = 86400000;
@@ -730,7 +729,7 @@ function App() {
       // ── Score mode: index points; imputed values are dashed diamonds. ──
       const sels = idxModels.map(m => {
         const cx=xS(m.ts), cy=yS(m.sc);
-        const c=COL[m.l], lb=LBL_SC_HIDE.has(m.n)?undefined:LBL[m.n];
+        const c=COL[m.l], lb=LBL[m.n];
         if (isNaN(cx)||isNaN(cy)) return null;
         if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
         const onFrontier = isIdxFrontier(m);
