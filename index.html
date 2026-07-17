@@ -93,28 +93,28 @@ const PRED = PRED_RAW.map(m => ({ ...m, p: m.p/60, p80: m.p80/60 }));
 // ECI<->AECI line (eciImp/aeciImp mark imputed values). GENERATED alongside
 // PRED_RAW by --emit-js; verify with --check-html.
 const IDX_RAW = [
-  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, l: "openai" },
-  { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, l: "openai" },
-  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, l: "anthropic" },
-  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, l: "openai" },
-  { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, l: "openai" },
-  { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, l: "anthropic" },
-  { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.93, aeciImp: true, l: "openai" },
-  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, l: "anthropic" },
-  { n: "o1",                  d: "2024-12-05", eci: 142.69, aeci: 141.55, aeciImp: true, l: "openai" },
-  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, l: "anthropic" },
-  { n: "o3",                  d: "2025-04-16", eci: 147.05, aeci: 145.75, aeciImp: true, l: "openai" },
-  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, l: "anthropic" },
-  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.01, aeciImp: true, l: "anthropic" },
-  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, l: "openai" },
+  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
+  { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
+  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, p50: 3.952262, p80: 0.638973, l: "anthropic" },
+  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
+  { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
+  { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, p50: 11.395377, p80: 1.671757, l: "anthropic" },
+  { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.93, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
+  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, p50: 20.522872, p80: 2.595677, l: "anthropic" },
+  { n: "o1",                  d: "2024-12-05", eci: 142.69, aeci: 141.55, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
+  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, p50: 60.388937, p80: 12.09179, l: "anthropic" },
+  { n: "o3",                  d: "2025-04-16", eci: 147.05, aeci: 145.75, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
+  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, p50: 100.366123, p80: 20.429752, l: "anthropic" },
+  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.01, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
+  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
   { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, l: "anthropic" },
-  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, l: "google" },
-  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, l: "anthropic" },
-  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, l: "openai" },
-  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, l: "openai" },
-  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, l: "anthropic" },
-  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, l: "google" },
-  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, l: "openai" },
+  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
+  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, p50: 292.994594, p80: 49.430584, l: "anthropic" },
+  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
+  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
+  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, p50: 718.80683, p80: 69.874587, l: "anthropic" },
+  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
+  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
   { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, l: "anthropic" },
   { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, l: "anthropic" },
   { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, l: "anthropic" },
@@ -787,19 +787,20 @@ function App() {
               {m.imp
                 ? <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>Imputed from {yMode==="eci"?"AECI":"ECI"} {m.other} via fitted line</div>
                 : <div style={{fontSize:11,color:"#777",marginTop:4}}>{yMode==="eci"?"AECI":"ECI"}: {m.other}{(yMode==="eci"?m.aeciImp:m.eciImp)?" (imputed)":""}</div>}
+              {m.p50 != null && <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>METR p50: {fmtH(m.p50/60)} · p80: {fmtH(m.p80/60)}</div>}
               {!isIdxFrontier(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Off-frontier — excluded from trend fit</div>}
             </> : <>
             <div>{m.pred?"predicted ":""}{useP80?"p80":"p50"} time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
             <div style={{fontSize:11,color:"#777",marginTop:4}}>{+m.p.toPrecision(4)} hours</div>
             {m.lo != null && m.hi != null && <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI: {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
-            {!m.pred && (()=>{ // capability indices: measured/imputed if known, else estimated from the p50 horizon
+            {(()=>{ // capability indices: measured/imputed if known, else estimated from the p50 horizon
               const ix = IDX_BY_NAME[m.n];
               if (ix) return <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>
                 ECI {ix.eci}{ix.eciImp?" (imputed)":""} · AECI {ix.aeci}{ix.aeciImp?" (imputed)":""}</div>;
+              if (m.pred) return <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>{m.basis}</div>;
               const est = (Math.log(m.p50h*60) - FITS.eciP50.a) / FITS.eciP50.b;
               return <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>est. ECI ≈ {est.toFixed(1)} (from p50 horizon)</div>;
             })()}
-            {m.pred && <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>{m.basis}</div>}
             {!m.pred && !isSota(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
             </>}
           </div>);
