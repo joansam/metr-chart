@@ -1,0 +1,14 @@
+{
+  "name": "metr-chart-render-test",
+  "private": true,
+  "description": "Headless-Chromium smoke test for index.html: renders every view/toggle state, exercises tooltips and zoom, screenshots each, and fails on console errors.",
+  "scripts": { "test": "node shot.js" },
+  "dependencies": {
+    "@babel/standalone": "7.23.9",
+    "playwright-core": "^1.45.0",
+    "prop-types": "15.8.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "recharts": "2.15.3"
+  }
+}
