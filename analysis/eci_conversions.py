@@ -110,9 +110,21 @@ PREDICTED_DATES = {
 }
 HTML = os.path.join(HERE, "..", "index.html")
 
+# analysis name -> index.html display name, where they differ (so score-mode
+# dots share labels/offsets with the time-horizon chart). Default is the
+# analysis name minus its "Claude " prefix.
+CHART_NAMES = {
+    "Claude 3 Opus":           "3 Opus",
+    "Claude 3.5 Sonnet":       "Claude 3.5 Sonnet",
+    "Claude 3.5 Sonnet (new)": "Claude 3.5S v2",
+    "Claude 3.7 Sonnet":       "Claude 3.7",
+    "Claude Opus 4":           "Opus 4",
+    "Claude Opus 4.1":         "Opus 4.1",
+}
+
 
 def load_metr(path=METR_YAML):
-    """yaml_key -> (p50_minutes, p80_minutes) point estimates."""
+    """yaml_key -> (p50_minutes, p80_minutes, release_date) point estimates."""
     text = open(path, encoding="utf-8").read()
     out = {}
     for block in re.split(r"\n  (?=[a-z0-9_]+:)", text.split("\nresults:\n", 1)[1]):
@@ -123,7 +135,8 @@ def load_metr(path=METR_YAML):
         for sec in ("p50_horizon_length", "p80_horizon_length"):
             m = re.search(sec + r":.*?estimate:\s*([\d.]+)", block, re.S)
             vals.append(float(m.group(1)) if m else None)
-        out[key.group(1)] = tuple(vals)
+        d = re.search(r"release_date:\s*([\d-]+)", block)
+        out[key.group(1)] = (*vals, d.group(1) if d else None)
     return out
 
 
@@ -186,14 +199,16 @@ def assemble(with_gpt35=False):
     metr, eci, aeci = load_metr(), load_eci(), load_aeci()
     rows = []
     for name, (mkey, ekey, lab) in MODELS.items():
-        p50, p80 = metr.get(mkey, (None, None)) if mkey else (None, None)
+        p50, p80, date = metr.get(mkey, (None, None, None)) if mkey else (None,) * 3
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
+                     "date": date or PREDICTED_DATES.get(name),
                      "eci": eci.get(ekey) if ekey else None,
                      "aeci": aeci.get(AECI_ALIASES.get(name, name))})
     if with_gpt35:
-        p50, p80 = metr[GPT35["metr_key"]]
+        p50, p80, date = metr[GPT35["metr_key"]]
         rows.insert(0, {"name": GPT35["name"], "p50": p50, "p80": p80,
-                        "lab": GPT35["lab"], "eci": GPT35["eci"], "aeci": None})
+                        "lab": GPT35["lab"], "date": date,
+                        "eci": GPT35["eci"], "aeci": None})
     return rows, eci
 
 
@@ -238,33 +253,74 @@ def predicted_rows(rows, fits):
     return out
 
 
-def emit_js(preds):
+def idx_rows(rows, fits):
+    """Score-mode chart rows: every model with at least one index gets both,
+    the missing one imputed through the ECI<->AECI fit and flagged."""
+    f = fits["eci_aeci"]
+    out = []
+    for r in rows:
+        if (r["eci"] is None and r["aeci"] is None) or r["date"] is None:
+            continue
+        eci, aeci, eci_imp, aeci_imp = r["eci"], r["aeci"], False, False
+        if eci is None:
+            eci, eci_imp = round(f["invert"](aeci), 2), True
+        if aeci is None:
+            aeci, aeci_imp = round(f["predict"](eci), 2), True
+        out.append({"n": CHART_NAMES.get(r["name"], r["name"].replace("Claude ", "")),
+                    "d": r["date"], "eci": eci, "aeci": aeci,
+                    "eciImp": eci_imp, "aeciImp": aeci_imp, "l": r["lab"]})
+    out.sort(key=lambda r: (r["d"], r["n"]))
+    return out
+
+
+def emit_js(preds, idx):
     lines = ["const PRED_RAW = ["]
     for r in preds:
         lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":18} d: "{r["d"]}", '
                      f'basis: "{r["basis"]}", p: {r["p"]:.6f}, p80: {r["p80"]:.6f}, '
                      f'l: "{r["l"]}" }},')
     lines.append("];")
+    lines.append("const IDX_RAW = [")
+    for r in idx:
+        flags = "".join(f", {k}: true" for k in ("eciImp", "aeciImp") if r[k])
+        lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":22} d: "{r["d"]}", '
+                     f'eci: {r["eci"]}, aeci: {r["aeci"]}{flags}, l: "{r["l"]}" }},')
+    lines.append("];")
     return "\n".join(lines)
 
 
-def check_html(preds):
+def check_html(preds, idx):
     html = open(HTML, encoding="utf-8").read()
     ok = True
+
+    def compare(name, want, got):
+        nonlocal ok
+        for w, g in zip(want, got):
+            if (w != g) if isinstance(w, str) else abs(w - g) > 1e-4 * max(1, abs(w)):
+                print(f"[DIFF] {name}: {w} != {g}")
+                ok = False
+
     for r in preds:
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
                       r'basis:\s*"([^"]*)",\s*p:\s*([\d.]+),\s*p80:\s*([\d.]+)', html)
         if not m:
-            print(f"[MISSING] {r['n']}")
+            print(f"[MISSING pred] {r['n']}")
             ok = False
             continue
-        want = [r["d"], r["basis"], r["p"], r["p80"]]
-        got = [m.group(1), m.group(2), *map(float, m.groups()[2:])]
-        for w, g in zip(want, got):
-            if (w != g) if isinstance(w, str) else abs(w - g) > 1e-4 * max(1, abs(w)):
-                print(f"[DIFF] {r['n']}: {w} != {g}")
-                ok = False
-    print("OK: index.html PRED_RAW matches fits" if ok else "*** MISMATCH ***")
+        compare(r["n"], [r["d"], r["basis"], r["p"], r["p80"]],
+                [m.group(1), m.group(2), *map(float, m.groups()[2:])])
+    for r in idx:
+        m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
+                      r'eci:\s*([\d.]+),\s*aeci:\s*([\d.]+)'
+                      r'(,\s*eciImp:\s*true)?(,\s*aeciImp:\s*true)?', html)
+        if not m:
+            print(f"[MISSING idx] {r['n']}")
+            ok = False
+            continue
+        compare(r["n"], [r["d"], r["eci"], r["aeci"], r["eciImp"], r["aeciImp"]],
+                [m.group(1), float(m.group(2)), float(m.group(3)),
+                 bool(m.group(4)), bool(m.group(5))])
+    print("OK: index.html PRED_RAW+IDX_RAW match fits" if ok else "*** MISMATCH ***")
     return ok
 
 
@@ -362,11 +418,16 @@ def main():
     drop = REWARD_HACKED if args.drop_reward_hacked else ()
     fits = build_fits(rows, drop=drop)
     if args.emit_js or args.check_html:
-        preds = predicted_rows(rows, fits)
+        # Generated arrays never depend on sensitivity flags: default fits,
+        # GPT-3.5 always present in the index rows (it has a chart dot).
+        base_rows, _ = assemble()
+        base_fits = build_fits(base_rows)
+        preds = predicted_rows(base_rows, base_fits)
+        idx = idx_rows(assemble(with_gpt35=True)[0], base_fits)
         if args.emit_js:
-            print(emit_js(preds))
+            print(emit_js(preds, idx))
         if args.check_html:
-            sys.exit(0 if check_html(preds) else 1)
+            sys.exit(0 if check_html(preds, idx) else 1)
     elif args.eci is not None or args.aeci is not None:
         convert(fits, args.eci, args.aeci, args.lab)
     else:

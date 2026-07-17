@@ -79,6 +79,40 @@ const PRED_RAW = [
 ];
 const PRED = PRED_RAW.map(m => ({ ...m, p: m.p/60, p80: m.p80/60 }));
 
+// ── Capability-index scores for the ECI / AECI y-axis modes. Every model with
+// either index gets both: the missing one is imputed through the fitted
+// ECI<->AECI line (eciImp/aeciImp mark imputed values). GENERATED alongside
+// PRED_RAW by --emit-js; verify with --check-html.
+const IDX_RAW = [
+  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, l: "openai" },
+  { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, l: "openai" },
+  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, l: "anthropic" },
+  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, l: "openai" },
+  { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, l: "openai" },
+  { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, l: "anthropic" },
+  { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.93, aeciImp: true, l: "openai" },
+  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, l: "anthropic" },
+  { n: "o1",                  d: "2024-12-05", eci: 142.69, aeci: 141.55, aeciImp: true, l: "openai" },
+  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, l: "anthropic" },
+  { n: "o3",                  d: "2025-04-16", eci: 147.05, aeci: 145.75, aeciImp: true, l: "openai" },
+  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, l: "anthropic" },
+  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.01, aeciImp: true, l: "anthropic" },
+  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, l: "openai" },
+  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, l: "anthropic" },
+  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, l: "google" },
+  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, l: "anthropic" },
+  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, l: "openai" },
+  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, l: "openai" },
+  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, l: "anthropic" },
+  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, l: "google" },
+  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, l: "openai" },
+  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, l: "anthropic" },
+  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, l: "anthropic" },
+  { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, l: "anthropic" },
+  { n: "Fable 5",             d: "2026-06-09", eci: 160.44, aeci: 158.64, aeciImp: true, l: "anthropic" },
+  { n: "Mythos 5",            d: "2026-06-09", eci: 163.19, aeci: 161.29, eciImp: true, l: "anthropic" },
+];
+
 // Models that get permanent labels + offsets
 const LBL = {
   "GPT-3.5 Instruct": { dx: 8, dy: -8 },
@@ -94,6 +128,7 @@ const LBL = {
   "Mythos Preview (Early)": { dx: -8, dy: -12, a: "end" },
   "Mythos 5": { dx: 8, dy: -8 },
   "Fable 5":  { dx: 8, dy: 12 },
+  "Mythos Preview": { dx: -8, dy: -8, a: "end" },
 };
 
 // ── Trend fits ──
@@ -180,6 +215,8 @@ function App() {
   const [showDecel, setShowDecel] = useState(true);
   const [useP80, setUseP80] = useState(false);
   const [showPreds, setShowPreds] = useState(true);
+  const [yMode, setYMode] = useState("th"); // "th" | "eci" | "aeci"
+  const isScore = yMode !== "th";
   const [fitFast, setFitFast] = useState(false); // false = fixed 3.5-mo, true = fitted slope
   const [decayPct, setDecayPct] = useState(20);   // % growth-rate decay per horizon doubling
   const [decayStartStr, setDecayStartStr] = useState("2026-06-01"); // when the slowdown begins
@@ -208,6 +245,52 @@ function App() {
   const predModels = useMemo(() => PRED.map(m => ({
     ...m, ts: new Date(m.d).getTime(), pred: true, p: useP80 ? m.p80 : m.p,
   })), [useP80]);
+
+  // ── Score-mode data (ECI / AECI y-axis): sc = active score, imp = imputed
+  // through the fitted ECI<->AECI line, other = the source value it came from. ──
+  const idxModels = useMemo(() => {
+    if (!isScore) return [];
+    return IDX_RAW.map(m => ({
+      ...m, ts: new Date(m.d).getTime(), idx: true,
+      sc: yMode === "eci" ? m.eci : m.aeci,
+      imp: yMode === "eci" ? !!m.eciImp : !!m.aeciImp,
+      other: yMode === "eci" ? m.aeci : m.eci,
+    }));
+  }, [yMode, isScore]);
+
+  // Cross-lab running-max frontier on the active score (same rule as the
+  // time-horizon SOTA set: a model is frontier if it beats every earlier one).
+  const isIdxFrontier = useMemo(() => {
+    const sorted = [...idxModels].sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
+    const set = new Set(); let mx = -Infinity;
+    for (const m of sorted) { if (m.sc > mx) { set.add(m.n + m.d); mx = m.sc; } }
+    return m => set.has(m.n + m.d);
+  }, [idxModels]);
+
+  // Linear frontier trend: score = a + b·t over frontier models, in pts/yr.
+  const scoreFit = useMemo(() => {
+    if (!isScore) return null;
+    const pts = idxModels.filter(isIdxFrontier);
+    const n = pts.length;
+    let sx=0, sy=0, sxx=0, sxy=0;
+    for (const m of pts) { sx+=m.ts; sy+=m.sc; sxx+=m.ts*m.ts; sxy+=m.ts*m.sc; }
+    const b = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+    const a = (sy - b*sx) / n;
+    return { pred: t => a + b*t, perYr: b * 365.25 * DAY_MS, n };
+  }, [idxModels, isIdxFrontier, isScore]);
+
+  const scoreDomain = useMemo(() => {
+    if (!isScore) return null;
+    let lo = Infinity, hi = -Infinity;
+    for (const m of idxModels) { if (m.sc < lo) lo = m.sc; if (m.sc > hi) hi = m.sc; }
+    return [Math.floor((lo - 3) / 5) * 5, Math.ceil((hi + 3) / 5) * 5];
+  }, [idxModels, isScore]);
+  const scoreTicks = useMemo(() => {
+    if (!scoreDomain) return [];
+    const t = [];
+    for (let v = scoreDomain[0]; v <= scoreDomain[1]; v += 5) t.push(v);
+    return t;
+  }, [scoreDomain]);
 
   // ── SOTA frontier for the active horizon: a model is SOTA if its horizon exceeds
   // every earlier-released model. p50 and p80 yield different frontiers, so this set
@@ -256,6 +339,14 @@ function App() {
     return d;
   }, [allFit, recFit, extendSlow, showFast, showDecel, decayStartMs, decayFrac]);
 
+  // Score-mode trend series: the linear frontier fit sampled weekly.
+  const scoreTrendData = useMemo(() => {
+    if (!scoreFit) return [];
+    const d = [], step = 7*86400000;
+    for (let t=CS; t<=CE; t+=step) d.push({ ts: t, sc: scoreFit.pred(t) });
+    return d;
+  }, [scoreFit]);
+
   // Auto-fit the zoomed-out y-ceiling to the topmost visible trend line (and any
   // model CI that reaches higher), rounded up to a labelled tick. Reacts to the
   // horizon/toggle state so e.g. extending to 2029 keeps the fast trend in frame.
@@ -281,6 +372,7 @@ function App() {
 
   const onWheel = useCallback((e) => {
     e.preventDefault();
+    if (isScore) return; // zoom lives in log-hours space; score modes stay unzoomed
     const container = chartRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -317,7 +409,7 @@ function App() {
       if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
       return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
     });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yLogBot, yLogTop]);
+  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yLogBot, yLogTop, isScore]);
 
   // Attach wheel listener with passive:false to allow preventDefault
   useEffect(() => {
@@ -330,6 +422,7 @@ function App() {
   // ── Pinch-to-zoom for touch devices ──
   const pinchRef = useRef(null); // { dist, cx, cy }
   const applyPinchZoom = useCallback((factor, cx, cy) => {
+    if (isScore) return;
     const container = chartRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -358,7 +451,7 @@ function App() {
       if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
       return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
     });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yLogBot, yLogTop]);
+  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yLogBot, yLogTop, isScore]);
 
   useEffect(() => {
     const el = chartRef.current;
@@ -454,6 +547,12 @@ function App() {
   const xDomain = [zoom.x0, zoom.x1];
   const yDomain = [Math.exp(zoom.ly0 ?? yLogBot), Math.exp(zoom.ly1 ?? yLogTop)];
 
+  // Switching y-axis mode drops any zoom (zoom math lives in log-hours space).
+  const switchMode = useCallback(mode => {
+    setYMode(mode);
+    setZoom({ x0: CS, x1: CE, ly0: null, ly1: null });
+  }, []);
+
   const onChartMouseMove = useCallback((e) => {
     if (isPanning.current) return;
     const container = chartRef.current;
@@ -507,9 +606,33 @@ function App() {
     const xr=xS.range(), yr=yS.range();
     const px0=Math.min(xr[0],xr[1]), px1=Math.max(xr[0],xr[1]);
     const py0=Math.min(yr[0],yr[1]), py1=Math.max(yr[0],yr[1]);
-    const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
     // Store pixel positions for mouse proximity detection
     const positions = [];
+    if (isScore) {
+      // ── Score mode: index points; imputed values are dashed diamonds. ──
+      const sels = idxModels.map(m => {
+        const cx=xS(m.ts), cy=yS(m.sc);
+        const c=COL[m.l], lb=LBL[m.n];
+        if (isNaN(cx)||isNaN(cy)) return null;
+        if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
+        const onFrontier = isIdxFrontier(m);
+        return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`}>
+          {m.imp
+            ? <path d={`M ${cx} ${cy-6} L ${cx+6} ${cy} L ${cx} ${cy+6} L ${cx-6} ${cy} Z`}
+                fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
+            : <circle cx={cx} cy={cy} r={5} fill={onFrontier?c:"#12121f"}
+                stroke={onFrontier?undefined:c} strokeWidth={onFrontier?undefined:2}/>}
+          <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
+            fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+        </g>);
+      });
+      dotPositions.current = positions;
+      return (<g>
+        <defs><clipPath id="plotClip"><rect x={px0} y={py0} width={px1-px0} height={py1-py0}/></clipPath></defs>
+        <g clipPath="url(#plotClip)">{sels}</g>
+      </g>);
+    }
+    const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
     const els = vis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
       const c=COL[m.l], lb=LBL[m.n];
@@ -561,6 +684,8 @@ function App() {
     return (<div style={{background:"#1a1a2e",border:"1px solid #444",borderRadius:6,padding:"8px 12px",fontFamily:FONT,fontSize:12,color:"#ccc"}}>
       <div style={{fontWeight:700,marginBottom:4}}>{ds}</div>
       {payload.map(p=>{
+        if (p.dataKey === "sc")
+          return (<div key={p.dataKey} style={{color:p.stroke}}>{scoreTrendLabel}: <b>{p.value.toFixed(1)}</b></div>);
         const dbl=p.payload?.[p.dataKey+"Dbl"];
         const PFX={slow:"Previous trend",fast:"New trend",decel:"Slowdown"};
         const lbl=dbl!=null ? `${PFX[p.dataKey]||"Trend"}: ${dbl.toFixed(1)}-month doubling` : p.name;
@@ -576,6 +701,9 @@ function App() {
     : "3.5-month doubling (2024+ trend)";
   const decStart = new Date(decayStartMs).toLocaleString("en-US",{month:"short",year:"numeric"});
   const decelLabel = `Slowdown: −${decayPct}%/doubling from ${decStart}`;
+  const scoreTrendLabel = scoreFit
+    ? `Frontier trend: +${scoreFit.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (n=${scoreFit.n})`
+    : "";
 
   return (
     <div style={{background:"#12121f",minHeight:"100vh",padding:isMobile?"16px 6px":"32px 24px"}}>
@@ -598,6 +726,16 @@ function App() {
           <span style={{color:COL.google}}>Google</span>
         </p>
 
+        {/* Y-axis mode: measured time horizon vs capability-index scores */}
+        <div style={{display:"flex",gap:0,marginBottom:10,fontFamily:FONT_D,fontSize:12}}>
+          {[["th","Time horizon"],["eci","ECI"],["aeci","AECI"]].map(([mode,lb],i)=>(
+            <button key={mode} onClick={()=>switchMode(mode)} style={{
+              background:yMode===mode?"#2a2a40":"transparent",color:yMode===mode?"#eee":"#777",
+              border:"1px solid #444",borderLeft:i===0?"1px solid #444":"none",
+              borderRadius:i===0?"6px 0 0 6px":(i===2?"0 6px 6px 0":0),
+              padding:"5px 14px",cursor:"pointer",fontFamily:FONT_D,fontSize:12}}>{lb}</button>
+          ))}
+        </div>
         <div ref={chartRef} style={{position:"relative",cursor:isZoomed?"grab":"default"}} onMouseDown={onPanStart} onMouseMove={onChartMouseMove} onMouseLeave={onChartMouseLeave}>
         {lastTip.current && (()=>{
           const {model:m,cx,cy}=lastTip.current;
@@ -611,30 +749,43 @@ function App() {
             minWidth:160,opacity:tipState.opacity,transition:"opacity 1s"}}>
             <div style={{fontWeight:700,color:COL[m.l],marginBottom:2}}>{m.n}</div>
             <div>{ds}</div>
+            {m.idx ? <>
+              <div>{yMode==="eci"?"ECI":"AECI"}: <b style={{color:"#eee"}}>{m.sc}</b></div>
+              {m.imp
+                ? <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>Imputed from {yMode==="eci"?"AECI":"ECI"} {m.other} via fitted line</div>
+                : <div style={{fontSize:11,color:"#777",marginTop:4}}>{yMode==="eci"?"AECI":"ECI"}: {m.other}{(yMode==="eci"?m.aeciImp:m.eciImp)?" (imputed)":""}</div>}
+              {!isIdxFrontier(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Off-frontier — excluded from trend fit</div>}
+            </> : <>
             <div>{m.pred?"predicted ":""}{useP80?"p80":"p50"} time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
             <div style={{fontSize:11,color:"#777",marginTop:4}}>{+m.p.toPrecision(4)} hours</div>
             {m.lo != null && m.hi != null && <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI: {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
             {m.pred && <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>No METR run — predicted from {m.basis}</div>}
             {!m.pred && !isSota(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
+            </>}
           </div>);
         })()}
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <ComposedChart data={trendData} margin={CHART_MARGIN}>
+          <ComposedChart data={isScore ? scoreTrendData : trendData} margin={CHART_MARGIN}>
             <CartesianGrid stroke="#2a2a40" strokeDasharray="3 3"/>
             <XAxis dataKey="ts" type="number" domain={xDomain} ticks={xTicks.filter(t=>t>=zoom.x0&&t<=zoom.x1)} tickFormatter={fmtDate}
               stroke="#666" tick={{fontSize:isMobile?10:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} allowDataOverflow/>
-            <YAxis scale="log" domain={yDomain} allowDataOverflow ticks={YTICKS.filter(t=>t>=yDomain[0]&&t<=yDomain[1])} tickFormatter={fmtYTick}
-              stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>
-            {MS.map(m=>(<ReferenceLine key={m.lb} y={m.h} stroke="#333" strokeDasharray="2 4"
+            {isScore
+              ? <YAxis scale="linear" domain={scoreDomain} allowDataOverflow ticks={scoreTicks}
+                  stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>
+              : <YAxis scale="log" domain={yDomain} allowDataOverflow ticks={YTICKS.filter(t=>t>=yDomain[0]&&t<=yDomain[1])} tickFormatter={fmtYTick}
+                  stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>}
+            {!isScore && MS.map(m=>(<ReferenceLine key={m.lb} y={m.h} stroke="#333" strokeDasharray="2 4"
               label={isMobile?false:{value:m.lb,position:"right",fill:"#555",fontSize:10,fontFamily:FONT}}/>))}
             <ReferenceLine x={TODAY} stroke="#f0c050" strokeDasharray="4 4" strokeWidth={1}
               label={{value:"Today",position:"top",fill:"#f0c050",fontSize:11,fontFamily:FONT_D}}/>
-            <Line dataKey="slow" stroke={COL.slow} strokeWidth={2} strokeDasharray="8 4"
-              dot={false} name={slowLabel} isAnimationActive={false}/>
-            <Line dataKey="fast" stroke={COL.fast} strokeWidth={2} strokeDasharray="8 4"
-              dot={false} name={fastLabel} isAnimationActive={false}/>
-            <Line dataKey="decel" stroke={COL.decel} strokeWidth={2} strokeDasharray="8 4"
-              dot={false} name={decelLabel} isAnimationActive={false}/>
+            {!isScore && <Line dataKey="slow" stroke={COL.slow} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={slowLabel} isAnimationActive={false}/>}
+            {!isScore && <Line dataKey="fast" stroke={COL.fast} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={fastLabel} isAnimationActive={false}/>}
+            {!isScore && <Line dataKey="decel" stroke={COL.decel} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={decelLabel} isAnimationActive={false}/>}
+            {isScore && <Line dataKey="sc" stroke={COL.fast} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={scoreTrendLabel} isAnimationActive={false}/>}
             <Customized component={Dots}/>
             {!tipState.model && <Tooltip content={<CTooltip/>}/>}
           </ComposedChart>
@@ -646,13 +797,28 @@ function App() {
 
         {/* Custom legend */}
         <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
-          {[[COL.slow,slowLabel],[COL.fast,fastLabel],[COL.decel,decelLabel]].map(([c,lb])=>(
+          {isScore && <>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={COL.fast} strokeWidth={2} strokeDasharray="6 3"/></svg>
+              {scoreTrendLabel}
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
+                stroke="#999" strokeWidth={1.5} strokeDasharray="3 2"/></svg>
+              imputed via ECI↔AECI fit
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <svg width={12} height={12}><circle cx={6} cy={6} r={4.5} fill="#12121f" stroke="#999" strokeWidth={2}/></svg>
+              off-frontier (excluded from trend)
+            </div>
+          </>}
+          {!isScore && [[COL.slow,slowLabel],[COL.fast,fastLabel],[COL.decel,decelLabel]].map(([c,lb])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:6}}>
               <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={c} strokeWidth={2} strokeDasharray="6 3"/></svg>
               {lb}
             </div>
           ))}
-          <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+          {!isScore && <><div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
             onClick={()=>setExtendSlow(v=>!v)}>
             <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.slow,
               background:extendSlow?COL.slow:"transparent",transition:"background 0.15s"}}/>
@@ -687,7 +853,7 @@ function App() {
             <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.fast,
               background:fitFast?COL.fast:"transparent",transition:"background 0.15s"}}/>
             <span style={{color:fitFast?"#ccc":"#777",transition:"color 0.15s"}}>Fit fast slope to data</span>
-          </div>
+          </div></>}
           {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
@@ -696,7 +862,7 @@ function App() {
         </div>
 
         {/* Slowdown-scenario parameters */}
-        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:14,marginTop:10,fontSize:13,
+        {!isScore && <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:14,marginTop:10,fontSize:13,
           color:showDecel?"#999":"#555",transition:"color 0.15s"}}>
           <span style={{display:"flex",alignItems:"center",gap:6}}>
             <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={COL.decel} strokeWidth={2} strokeDasharray="6 3"/></svg>
@@ -717,15 +883,23 @@ function App() {
               style={{background:"#1a1a2e",color:"#ccc",border:"1px solid #444",borderRadius:4,
                 padding:"3px 6px",fontFamily:FONT,fontSize:13,colorScheme:"dark"}}/>
           </label>
-        </div>
+        </div>}
 
-        <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
+        {isScore
+          ? <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
+              Linear Y-axis: {yMode==="eci" ? "Epoch Capabilities Index (public ECI)" :
+              "Anthropic internal ECI (AECI, extracted from system-card charts)"}. Filled dots are
+              measured scores; dashed diamonds are imputed through the fitted ECI↔AECI line
+              (AECI = 4.16 + 0.963·ECI, within-variant Claude pairs). Trend is a linear fit to the
+              cross-lab running-max frontier. Data: Epoch AI Benchmarking Hub / abstatisticalconsulting.substack.com.
+            </p>
+          : <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
           Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-mid-2024 SOTA;
           {fitFast
             ? ` fast trend is a least-squares fit to mid-2024+ ${horizonTag} points (${recFit.dMo.toFixed(1)}-mo doubling).`
             : " fast trend fixed at 3.5-month doubling, anchored to mid-2024+ reasoning-era SOTA."}
           {" "}Data: METR Horizon v1.1.
-        </p>
+        </p>}
 
         <div style={{marginTop:28,padding:"18px 22px",background:"#1a1a2e",borderRadius:8,borderLeft:"3px solid #f0c050"}}>
           <h3 style={{fontFamily:FONT_D,fontSize:15,fontWeight:700,color:"#eee",marginBottom:8}}>
