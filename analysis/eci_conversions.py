@@ -83,6 +83,8 @@ MODELS = {
     "GPT-5.2":                 ("gpt_5_2",                            "gpt-5.2-2025-12-11",         "openai"),
     "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "gpt-5.3-codex",              "openai"),
     "GPT-5.4":                 ("gpt_5_4",                            "gpt-5.4-2026-03-05",         "openai"),
+    "GPT-5.5":                 (None,                                 "gpt-5.5",                    "openai"),
+    "GPT-5.6 Sol":             (None,                                 "gpt-5.6-sol",                "openai"),
     "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
     "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
 }
@@ -107,6 +109,8 @@ PREDICTED_DATES = {
     "Claude Mythos Preview": "2026-04-07",
     "Claude Mythos 5":       "2026-06-09",
     "Claude Fable 5":        "2026-06-09",
+    "GPT-5.5":               "2026-04-23",
+    "GPT-5.6 Sol":           "2026-07-09",
 }
 HTML = os.path.join(HERE, "..", "index.html")
 
@@ -231,26 +235,33 @@ def build_fits(rows, drop=()):
 
 
 def predicted_rows(rows, fits):
-    """Chart rows for models in PREDICTED_DATES (no METR result), predicted
-    from the AECI fit. Models with only a public ECI (Fable 5) go through the
-    ECI->AECI conversion first; `basis` records which route was used.
+    """Chart rows for models in PREDICTED_DATES (no METR result). Anthropic
+    models go through the AECI fit (using the implied AECI when only a public
+    ECI exists, e.g. Fable 5); other labs use the lab-adjusted ECI fit, since
+    the AECI regression is Claude-only. `basis` records the route.
     Values in minutes, matching M_RAW in index.html."""
     out = []
     for r in rows:
         if r["p50"] is not None or r["name"] not in PREDICTED_DATES:
             continue
-        if r["aeci"] is not None:
+        if r["lab"] != "anthropic" and r["eci"] is not None:
+            p50 = fits["eci_p50_lab"]["predict"](r["eci"], r["lab"])
+            p80 = fits["eci_p80_lab"]["predict"](r["eci"], r["lab"])
+            basis = f"ECI {r['eci']} ({r['lab']} lab-adjusted ECI fit)"
+        elif r["aeci"] is not None:
             aeci, basis = r["aeci"], f"AECI {r['aeci']}"
+            p50 = fits["aeci_p50"]["predict"](aeci)
+            p80 = fits["aeci_p80"]["predict"](aeci)
         elif r["eci"] is not None:
             aeci = fits["eci_aeci"]["predict"](r["eci"])
             basis = f"ECI {r['eci']} (implied AECI {aeci:.1f})"
+            p50 = fits["aeci_p50"]["predict"](aeci)
+            p80 = fits["aeci_p80"]["predict"](aeci)
         else:
             continue
         out.append({"n": r["name"].replace("Claude ", ""),
                     "d": PREDICTED_DATES[r["name"]], "basis": basis,
-                    "p": fits["aeci_p50"]["predict"](aeci),
-                    "p80": fits["aeci_p80"]["predict"](aeci),
-                    "l": r["lab"]})
+                    "p": p50, "p80": p80, "l": r["lab"]})
     out.sort(key=lambda r: (r["d"], r["n"]))
     return out
 

@@ -82,9 +82,11 @@ const PRED_RAW = [
   { n: "Sonnet 4.5",      d: "2025-09-29", basis: "AECI 145.9", p: 200.680311, p80: 29.484408, l: "anthropic" },
   { n: "Mythos Preview",  d: "2026-04-07", basis: "AECI 158.91", p: 2345.006320, p80: 317.875501, l: "anthropic" },
   { n: "Opus 4.7",        d: "2026-04-16", basis: "AECI 155.0", p: 1120.154173, p80: 155.561471, l: "anthropic" },
+  { n: "GPT-5.5",         d: "2026-04-23", basis: "ECI 158.33 (openai lab-adjusted ECI fit)", p: 674.870843, p80: 118.997888, l: "openai" },
   { n: "Opus 4.8",        d: "2026-05-28", basis: "AECI 156.4", p: 1459.371836, p80: 200.921587, l: "anthropic" },
   { n: "Fable 5",         d: "2026-06-09", basis: "ECI 160.44 (implied AECI 158.6)", p: 2228.132768, p80: 302.539056, l: "anthropic" },
   { n: "Mythos 5",        d: "2026-06-09", basis: "AECI 161.29", p: 3676.663539, p80: 491.098723, l: "anthropic" },
+  { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 161.77 (openai lab-adjusted ECI fit)", p: 1184.012443, p80: 203.900420, l: "openai" },
 ];
 const PRED = PRED_RAW.map(m => ({ ...m, p: m.p/60, p80: m.p80/60 }));
 
@@ -117,9 +119,11 @@ const IDX_RAW = [
   { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
   { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
   { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
+  { n: "GPT-5.5",             d: "2026-04-23", eci: 158.33, aeci: 156.61, aeciImp: true, l: "openai" },
   { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, aeciLo: 153.2, aeciHi: 159.4, l: "anthropic" },
   { n: "Fable 5",             d: "2026-06-09", eci: 160.44, aeci: 158.64, aeciImp: true, l: "anthropic" },
   { n: "Mythos 5",            d: "2026-06-09", eci: 163.19, aeci: 161.29, eciImp: true, aeciLo: 157.32, aeciHi: 165.39, l: "anthropic" },
+  { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 161.77, aeci: 159.92, aeciImp: true, l: "openai" },
 ];
 // ── One record per model for tooltips, merging M_RAW (measured horizons),
 // PRED_RAW (predicted horizons) and IDX_RAW (indices). Every model gets TH,
@@ -165,6 +169,7 @@ const LBL = {
   "Mythos 5": { dx: 8, dy: -8 },
   "Fable 5":  { dx: 8, dy: 12 },
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
+  "GPT-5.6 Sol": { dx: 8, dy: 14 },
 };
 
 // ── Trend fits ──
