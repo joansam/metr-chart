@@ -190,8 +190,8 @@ def lin_fit(x, y):
 
 
 def load_aeci(path=AECI_CSV):
-    """display name -> AECI point estimate."""
-    return {r["model"]: float(r["aeci"])
+    """display name -> (AECI point estimate, ci_low, ci_high)."""
+    return {r["model"]: (float(r["aeci"]), float(r["aeci_ci_low"]), float(r["aeci_ci_high"]))
             for r in csv.DictReader(open(path, encoding="utf-8"))}
 
 
@@ -200,10 +200,12 @@ def assemble(with_gpt35=False):
     rows = []
     for name, (mkey, ekey, lab) in MODELS.items():
         p50, p80, date = metr.get(mkey, (None, None, None)) if mkey else (None,) * 3
+        a = aeci.get(AECI_ALIASES.get(name, name))
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
                      "date": date or PREDICTED_DATES.get(name),
                      "eci": eci.get(ekey) if ekey else None,
-                     "aeci": aeci.get(AECI_ALIASES.get(name, name))})
+                     "aeci": a[0] if a else None,
+                     "aeciLo": a[1] if a else None, "aeciHi": a[2] if a else None})
     if with_gpt35:
         p50, p80, date = metr[GPT35["metr_key"]]
         rows.insert(0, {"name": GPT35["name"], "p50": p50, "p80": p80,
@@ -269,6 +271,8 @@ def idx_rows(rows, fits):
         out.append({"n": CHART_NAMES.get(r["name"], r["name"].replace("Claude ", "")),
                     "d": r["date"], "eci": eci, "aeci": aeci,
                     "eciImp": eci_imp, "aeciImp": aeci_imp,
+                    "aeciLo": None if aeci_imp else r["aeciLo"],
+                    "aeciHi": None if aeci_imp else r["aeciHi"],
                     "p50": r["p50"], "p80": r["p80"], "l": r["lab"]})
     out.sort(key=lambda r: (r["d"], r["n"]))
     return out
@@ -293,9 +297,11 @@ def emit_js(preds, idx, fits):
     lines.append("const IDX_RAW = [")
     for r in idx:
         flags = "".join(f", {k}: true" for k in ("eciImp", "aeciImp") if r[k])
+        ci = (f', aeciLo: {r["aeciLo"]}, aeciHi: {r["aeciHi"]}'
+              if r["aeciLo"] is not None else "")
         th = (f', p50: {r["p50"]}, p80: {r["p80"]}' if r["p50"] is not None else "")
         lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":22} d: "{r["d"]}", '
-                     f'eci: {r["eci"]}, aeci: {r["aeci"]}{flags}{th}, l: "{r["l"]}" }},')
+                     f'eci: {r["eci"]}, aeci: {r["aeci"]}{flags}{ci}{th}, l: "{r["l"]}" }},')
     lines.append("];")
     return "\n".join(lines)
 
@@ -335,16 +341,19 @@ def check_html(preds, idx, fits):
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
                       r'eci:\s*([\d.]+),\s*aeci:\s*([\d.]+)'
                       r'(,\s*eciImp:\s*true)?(,\s*aeciImp:\s*true)?'
+                      r'(?:,\s*aeciLo:\s*([\d.]+),\s*aeciHi:\s*([\d.]+))?'
                       r'(?:,\s*p50:\s*([\d.]+),\s*p80:\s*([\d.]+))?', html)
         if not m:
             print(f"[MISSING idx] {r['n']}")
             ok = False
             continue
         compare(r["n"], [r["d"], r["eci"], r["aeci"], r["eciImp"], r["aeciImp"],
+                         r["aeciLo"] or 0.0, r["aeciHi"] or 0.0,
                          r["p50"] or 0.0, r["p80"] or 0.0],
                 [m.group(1), float(m.group(2)), float(m.group(3)),
                  bool(m.group(4)), bool(m.group(5)),
-                 float(m.group(6) or 0), float(m.group(7) or 0)])
+                 float(m.group(6) or 0), float(m.group(7) or 0),
+                 float(m.group(8) or 0), float(m.group(9) or 0)])
     print("OK: index.html PRED_RAW+IDX_RAW match fits" if ok else "*** MISMATCH ***")
     return ok
 

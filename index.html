@@ -95,34 +95,59 @@ const PRED = PRED_RAW.map(m => ({ ...m, p: m.p/60, p80: m.p80/60 }));
 const IDX_RAW = [
   { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
   { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
-  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, p50: 3.952262, p80: 0.638973, l: "anthropic" },
+  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, aeciLo: 123.9, aeciHi: 126.8, p50: 3.952262, p80: 0.638973, l: "anthropic" },
   { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
   { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
-  { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, p50: 11.395377, p80: 1.671757, l: "anthropic" },
+  { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, aeciLo: 130.0, aeciHi: 130.0, p50: 11.395377, p80: 1.671757, l: "anthropic" },
   { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.93, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
-  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, p50: 20.522872, p80: 2.595677, l: "anthropic" },
+  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, aeciLo: 132.3, aeciHi: 135.3, p50: 20.522872, p80: 2.595677, l: "anthropic" },
   { n: "o1",                  d: "2024-12-05", eci: 142.69, aeci: 141.55, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
-  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, p50: 60.388937, p80: 12.09179, l: "anthropic" },
+  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, aeciLo: 138.3, aeciHi: 141.2, p50: 60.388937, p80: 12.09179, l: "anthropic" },
   { n: "o3",                  d: "2025-04-16", eci: 147.05, aeci: 145.75, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
-  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, p50: 100.366123, p80: 20.429752, l: "anthropic" },
+  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, aeciLo: 140.4, aeciHi: 143.8, p50: 100.366123, p80: 20.429752, l: "anthropic" },
   { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.01, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
   { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
-  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, l: "anthropic" },
+  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, aeciLo: 144.3, aeciHi: 148.2, l: "anthropic" },
   { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
-  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, p50: 292.994594, p80: 49.430584, l: "anthropic" },
+  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, aeciLo: 146.7, aeciHi: 150.7, p50: 292.994594, p80: 49.430584, l: "anthropic" },
   { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
   { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
-  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, p50: 718.80683, p80: 69.874587, l: "anthropic" },
+  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, aeciLo: 150.4, aeciHi: 155.3, p50: 718.80683, p80: 69.874587, l: "anthropic" },
   { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
   { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
-  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, l: "anthropic" },
-  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, l: "anthropic" },
-  { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, l: "anthropic" },
+  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
+  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
+  { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, aeciLo: 153.2, aeciHi: 159.4, l: "anthropic" },
   { n: "Fable 5",             d: "2026-06-09", eci: 160.44, aeci: 158.64, aeciImp: true, l: "anthropic" },
-  { n: "Mythos 5",            d: "2026-06-09", eci: 163.19, aeci: 161.29, eciImp: true, l: "anthropic" },
+  { n: "Mythos 5",            d: "2026-06-09", eci: 163.19, aeci: 161.29, eciImp: true, aeciLo: 157.32, aeciHi: 165.39, l: "anthropic" },
 ];
-// Index scores by chart display name, for the time-horizon tooltips.
-const IDX_BY_NAME = Object.fromEntries(IDX_RAW.map(m => [m.n, m]));
+// ── One record per model for tooltips, merging M_RAW (measured horizons),
+// PRED_RAW (predicted horizons) and IDX_RAW (indices). Every model gets TH,
+// ECI and AECI with a provenance tag; gaps fill by estimation through the
+// FITS lines (TH -> ECI -> AECI). Horizon values in minutes.
+const INFO = (() => {
+  const out = {};
+  const get = n => out[n] ?? (out[n] = { n });
+  for (const m of M_RAW) Object.assign(get(m.n), { p50: m.p, p80: m.p80, thSrc: "measured" });
+  for (const m of PRED_RAW) if (get(m.n).p50 == null)
+    Object.assign(get(m.n), { p50: m.p, p80: m.p80, thSrc: "predicted" });
+  for (const m of IDX_RAW) Object.assign(get(m.n), {
+    eci: m.eci, eciSrc: m.eciImp ? "imputed" : "measured",
+    aeci: m.aeci, aeciSrc: m.aeciImp ? "imputed" : "measured",
+    aeciLo: m.aeciLo, aeciHi: m.aeciHi,
+  });
+  for (const r of Object.values(out)) {
+    if (r.eci == null && r.p50 != null) {
+      r.eci = +(((Math.log(r.p50) - FITS.eciP50.a) / FITS.eciP50.b).toFixed(1));
+      r.eciSrc = "est. from TH";
+    }
+    if (r.aeci == null && r.eci != null) {
+      r.aeci = +((FITS.eciAeci.a + FITS.eciAeci.b * r.eci).toFixed(1));
+      r.aeciSrc = "est. from TH";
+    }
+  }
+  return out;
+})();
 
 // Models that get permanent labels + offsets
 const LBL = {
@@ -228,6 +253,7 @@ function App() {
   const [showPreds, setShowPreds] = useState(true);
   const [yMode, setYMode] = useState("th"); // "th" | "eci" | "aeci"
   const isScore = yMode !== "th";
+  const [pinScore, setPinScore] = useState(false); // pin score fast trend to the system card's 13.5 pts/yr
   const [fitFast, setFitFast] = useState(false); // false = fixed 3.5-mo, true = fitted slope
   const [decayPct, setDecayPct] = useState(20);   // % growth-rate decay per horizon doubling
   const [decayStartStr, setDecayStartStr] = useState("2026-06-01"); // when the slowdown begins
@@ -248,9 +274,8 @@ function App() {
 
   const models = useMemo(() => M.map(m => {
     const ts = new Date(m.d).getTime();
-    // p50h keeps the p50 horizon regardless of toggle (tooltips estimate ECI from it)
-    if (useP80) return { ...m, ts, p: m.p80, lo: m.lo80, hi: m.hi80, p50h: m.p };
-    return { ...m, ts, p50h: m.p };
+    if (useP80) return { ...m, ts, p: m.p80, lo: m.lo80, hi: m.hi80 };
+    return { ...m, ts };
   }), [useP80]);
 
   // Predicted points (AECI conversions) — never enter the SOTA set or trend fits.
@@ -266,7 +291,9 @@ function App() {
       ...m, ts: new Date(m.d).getTime(), idx: true,
       sc: yMode === "eci" ? m.eci : m.aeci,
       imp: yMode === "eci" ? !!m.eciImp : !!m.aeciImp,
-      other: yMode === "eci" ? m.aeci : m.eci,
+      // measured AECI values carry system-card CIs; ECI has none published
+      lo: yMode === "aeci" && !m.aeciImp ? m.aeciLo : null,
+      hi: yMode === "aeci" && !m.aeciImp ? m.aeciHi : null,
     }));
   }, [yMode, isScore]);
 
@@ -290,13 +317,22 @@ function App() {
       for (const m of pts) { sx+=m.ts; sy+=m.sc; sxx+=m.ts*m.ts; sxy+=m.ts*m.sc; }
       const b = (n*sxy - sx*sy) / (n*sxx - sx*sx);
       const a = (sy - b*sx) / n;
-      return { pred: t => a + b*t, perYr: b * 365.25 * DAY_MS, n };
+      return { pred: t => a + b*t, slope: b, perYr: b * 365.25 * DAY_MS, n, pinned: false };
+    };
+    // Fixed-slope fit (system card's frontier rate): optimize intercept only.
+    const pin = (pts, perYr) => {
+      const b = perYr / (365.25 * DAY_MS);
+      let s = 0;
+      for (const m of pts) s += m.sc - b * m.ts;
+      const a = s / pts.length;
+      return { pred: t => a + b*t, slope: b, perYr, n: pts.length, pinned: true };
     };
     const slowCut = new Date(2024,5,1).getTime(); // same boundary as the TH fits
     const pts = idxModels.filter(isIdxFrontier);
+    const fastPts = pts.filter(m => m.ts >= slowCut);
     return { slow: lin(pts.filter(m => m.ts < slowCut)),
-             fast: lin(pts.filter(m => m.ts >= slowCut)) };
-  }, [idxModels, isIdxFrontier, isScore]);
+             fast: pinScore ? pin(fastPts, 13.5) : lin(fastPts) };
+  }, [idxModels, isIdxFrontier, isScore, pinScore]);
 
   const scoreDomain = useMemo(() => {
     if (!isScore) return null;
@@ -339,6 +375,20 @@ function App() {
   }, [decayStartStr]);
   const decayFrac = Math.min(Math.max(decayPct/100, 0), 0.95);
 
+  // Score-space slowdown: growth rate decays decayFrac per TH-doubling-equivalent
+  // of score gained (K points = ln2 / TH-fit slope), mirroring the TH scenario.
+  const scoreDecel = useMemo(() => {
+    if (!scoreFit) return null;
+    const K = Math.LN2 / (yMode === "eci" ? FITS.eciP50.b : FITS.aeciP50.b);
+    return t => {
+      const f = scoreFit.fast, r0 = f.slope;
+      if (t <= decayStartMs || decayFrac <= 0) return f.pred(t);
+      const y0 = f.pred(decayStartMs), tau = t - decayStartMs;
+      const k = Math.log(1 - decayFrac) / K; // < 0
+      return y0 - (1/k) * Math.log(1 - k * r0 * tau);
+    };
+  }, [scoreFit, yMode, decayStartMs, decayFrac]);
+
   const CUT = new Date(2024,8,11).getTime(); // era boundary (o1-preview, Sep 11 2024)
   const trendData = useMemo(() => {
     const d = [], step = 7*86400000;
@@ -359,17 +409,19 @@ function App() {
   }, [allFit, recFit, extendSlow, showFast, showDecel, decayStartMs, decayFrac]);
 
   // Score-mode trend series: the split frontier fits sampled weekly, changing
-  // over at the same era boundary (CUT) the time-horizon lines use.
+  // over at the same era boundary (CUT) the time-horizon lines use, plus the
+  // slowdown scenario. Same toggles as the TH view.
   const scoreTrendData = useMemo(() => {
     if (!scoreFit) return [];
     const d = [], step = 7*86400000;
     for (let t=CS; t<=CE; t+=step) d.push({
       ts: t,
-      scSlow: t <= CUT ? scoreFit.slow.pred(t) : null,
-      scFast: t >= CUT ? scoreFit.fast.pred(t) : null,
+      scSlow: (extendSlow || t <= CUT) ? scoreFit.slow.pred(t) : null,
+      scFast: (showFast && t >= CUT) ? scoreFit.fast.pred(t) : null,
+      scDecel: (showDecel && t >= CUT) ? scoreDecel(t) : null,
     });
     return d;
-  }, [scoreFit]);
+  }, [scoreFit, scoreDecel, extendSlow, showFast, showDecel]);
 
   // Auto-fit the zoomed-out y-ceiling to the topmost visible trend line (and any
   // model CI that reaches higher), rounded up to a labelled tick. Reacts to the
@@ -645,7 +697,14 @@ function App() {
         if (isNaN(cx)||isNaN(cy)) return null;
         if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
         const onFrontier = isIdxFrontier(m);
+        const hasCI = m.lo != null && m.hi != null && m.hi > m.lo;
+        const ct = hasCI ? yS(m.hi) : null, cb = hasCI ? yS(m.lo) : null;
         return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`}>
+          {hasCI && <>
+            <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
+            <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
+            <line x1={cx-3} y1={cb} x2={cx+3} y2={cb} stroke={c} strokeWidth={1} opacity={0.45}/>
+          </>}
           {m.imp
             ? <path d={`M ${cx} ${cy-6} L ${cx+6} ${cy} L ${cx} ${cy+6} L ${cx-6} ${cy} Z`}
                 fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
@@ -713,9 +772,10 @@ function App() {
     return (<div style={{background:"#1a1a2e",border:"1px solid #444",borderRadius:6,padding:"8px 12px",fontFamily:FONT,fontSize:12,color:"#ccc"}}>
       <div style={{fontWeight:700,marginBottom:4}}>{ds}</div>
       {payload.map(p=>{
-        if (p.dataKey === "scSlow" || p.dataKey === "scFast")
+        const SC = { scSlow: scoreSlowLabel, scFast: scoreFastLabel, scDecel: scoreDecelLabel };
+        if (SC[p.dataKey])
           return (<div key={p.dataKey} style={{color:p.stroke}}>
-            {p.dataKey === "scSlow" ? scoreSlowLabel : scoreFastLabel}: <b>{p.value.toFixed(1)}</b></div>);
+            {SC[p.dataKey]}: <b>{p.value.toFixed(1)}</b></div>);
         const dbl=p.payload?.[p.dataKey+"Dbl"];
         const PFX={slow:"Previous trend",fast:"New trend",decel:"Slowdown"};
         const lbl=dbl!=null ? `${PFX[p.dataKey]||"Trend"}: ${dbl.toFixed(1)}-month doubling` : p.name;
@@ -735,8 +795,11 @@ function App() {
     ? `Previous trend: +${scoreFit.slow.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (n=${scoreFit.slow.n})`
     : "";
   const scoreFastLabel = scoreFit
-    ? `New trend: +${scoreFit.fast.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (2024+, n=${scoreFit.fast.n})`
+    ? (scoreFit.fast.pinned
+        ? `New trend: +13.5 ${yMode.toUpperCase()}/yr (system-card rate, n=${scoreFit.fast.n})`
+        : `New trend: +${scoreFit.fast.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (2024+, n=${scoreFit.fast.n})`)
     : "";
+  const scoreDecelLabel = `Slowdown: −${decayPct}%/doubling-equiv from ${decStart}`;
 
   return (
     <div style={{background:"#12121f",minHeight:"100vh",padding:isMobile?"16px 6px":"32px 24px"}}>
@@ -782,27 +845,30 @@ function App() {
             minWidth:160,opacity:tipState.opacity,transition:"opacity 1s"}}>
             <div style={{fontWeight:700,color:COL[m.l],marginBottom:2}}>{m.n}</div>
             <div>{ds}</div>
-            {m.idx ? <>
-              <div>{yMode==="eci"?"ECI":"AECI"}: <b style={{color:"#eee"}}>{m.sc}</b></div>
-              {m.imp
-                ? <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>Imputed from {yMode==="eci"?"AECI":"ECI"} {m.other} via fitted line</div>
-                : <div style={{fontSize:11,color:"#777",marginTop:4}}>{yMode==="eci"?"AECI":"ECI"}: {m.other}{(yMode==="eci"?m.aeciImp:m.eciImp)?" (imputed)":""}</div>}
-              {m.p50 != null && <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>METR p50: {fmtH(m.p50/60)} · p80: {fmtH(m.p80/60)}</div>}
-              {!isIdxFrontier(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Off-frontier — excluded from trend fit</div>}
-            </> : <>
-            <div>{m.pred?"predicted ":""}{useP80?"p80":"p50"} time horizon: <b style={{color:"#eee"}}>{fmtH(m.p)}</b></div>
-            <div style={{fontSize:11,color:"#777",marginTop:4}}>{+m.p.toPrecision(4)} hours</div>
-            {m.lo != null && m.hi != null && <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI: {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
-            {(()=>{ // capability indices: measured/imputed if known, else estimated from the p50 horizon
-              const ix = IDX_BY_NAME[m.n];
-              if (ix) return <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>
-                ECI {ix.eci}{ix.eciImp?" (imputed)":""} · AECI {ix.aeci}{ix.aeciImp?" (imputed)":""}</div>;
-              if (m.pred) return <div style={{fontSize:11,color:"#c084fc",marginTop:4}}>{m.basis}</div>;
-              const est = (Math.log(m.p50h*60) - FITS.eciP50.a) / FITS.eciP50.b;
-              return <div style={{fontSize:11,color:"#9ab7d3",marginTop:2}}>est. ECI ≈ {est.toFixed(1)} (from p50 horizon)</div>;
+            {(()=>{ // unified body: TH, ECI, AECI for every model, provenance tagged
+              const r = INFO[m.n];
+              if (!r) return null;
+              const tag = s => s === "measured" ? "" : ` (${s})`;
+              const hl = (key, txt) => key === hlKey
+                ? <b style={{color:"#eee"}}>{txt}</b> : <>{txt}</>;
+              const hlKey = m.idx ? yMode : (useP80 ? "p80" : "p50");
+              return (<>
+                {r.p50 != null && <div>TH p50: {hl("p50", fmtH(r.p50/60))} · p80: {hl("p80", fmtH(r.p80/60))}
+                  <span style={{color:"#999"}}>{tag(r.thSrc)}</span></div>}
+                {r.eci != null && <div style={{color:"#9ab7d3"}}>ECI: {hl("eci", r.eci)}
+                  <span style={{color:"#999"}}>{tag(r.eciSrc)}</span></div>}
+                {r.aeci != null && <div style={{color:"#9ab7d3"}}>AECI: {hl("aeci", r.aeci)}
+                  <span style={{color:"#999"}}>{tag(r.aeciSrc)}</span></div>}
+              </>);
             })()}
-            {!m.pred && !isSota(m) && <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
-            </>}
+            {!m.idx && m.lo != null && m.hi != null &&
+              <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI ({useP80?"p80":"p50"}): {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
+            {m.idx && yMode === "aeci" && m.lo != null &&
+              <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI: {m.lo} – {m.hi}</div>}
+            {!m.idx && !m.pred && !isSota(m) &&
+              <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
+            {m.idx && !isIdxFrontier(m) &&
+              <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Off-frontier — excluded from trend fit</div>}
           </div>);
         })()}
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -829,6 +895,8 @@ function App() {
               dot={false} name={scoreSlowLabel} isAnimationActive={false}/>}
             {isScore && <Line dataKey="scFast" stroke={COL.fast} strokeWidth={2} strokeDasharray="8 4"
               dot={false} name={scoreFastLabel} isAnimationActive={false}/>}
+            {isScore && <Line dataKey="scDecel" stroke={COL.decel} strokeWidth={2} strokeDasharray="8 4"
+              dot={false} name={scoreDecelLabel} isAnimationActive={false}/>}
             <Customized component={Dots}/>
             {!tipState.model && <Tooltip content={<CTooltip/>}/>}
           </ComposedChart>
@@ -841,12 +909,36 @@ function App() {
         {/* Custom legend */}
         <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
           {isScore && <>
-            {[[COL.slow,scoreSlowLabel],[COL.fast,scoreFastLabel]].map(([c,lb])=>(
+            {[[COL.slow,scoreSlowLabel],[COL.fast,scoreFastLabel],[COL.decel,scoreDecelLabel]].map(([c,lb])=>(
               <div key={lb} style={{display:"flex",alignItems:"center",gap:6}}>
                 <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={c} strokeWidth={2} strokeDasharray="6 3"/></svg>
                 {lb}
               </div>
             ))}
+            <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+              onClick={()=>setExtendSlow(v=>!v)}>
+              <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.slow,
+                background:extendSlow?COL.slow:"transparent",transition:"background 0.15s"}}/>
+              <span style={{color:extendSlow?"#ccc":"#777",transition:"color 0.15s"}}>Extend previous trend →</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+              onClick={()=>setShowFast(v=>!v)}>
+              <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.fast,
+                background:showFast?COL.fast:"transparent",transition:"background 0.15s"}}/>
+              <span style={{color:showFast?"#ccc":"#777",transition:"color 0.15s"}}>No slowdown</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+              onClick={()=>setShowDecel(v=>!v)}>
+              <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.decel,
+                background:showDecel?COL.decel:"transparent",transition:"background 0.15s"}}/>
+              <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>2026 slowdown</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+              onClick={()=>setPinScore(v=>!v)}>
+              <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.fast,
+                background:pinScore?COL.fast:"transparent",transition:"background 0.15s"}}/>
+              <span style={{color:pinScore?"#ccc":"#777",transition:"color 0.15s"}}>Pin new trend to 13.5/yr (system card)</span>
+            </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
                 stroke="#999" strokeWidth={1.5} strokeDasharray="3 2"/></svg>
@@ -906,8 +998,8 @@ function App() {
           ))}
         </div>
 
-        {/* Slowdown-scenario parameters */}
-        {!isScore && <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:14,marginTop:10,fontSize:13,
+        {/* Slowdown-scenario parameters (shared by TH and score modes) */}
+        {<div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:14,marginTop:10,fontSize:13,
           color:showDecel?"#999":"#555",transition:"color 0.15s"}}>
           <span style={{display:"flex",alignItems:"center",gap:6}}>
             <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={COL.decel} strokeWidth={2} strokeDasharray="6 3"/></svg>
