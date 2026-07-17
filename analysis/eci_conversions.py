@@ -87,6 +87,11 @@ MODELS = {
     "GPT-5.6 Sol":             (None,                                 "gpt-5.6-sol",                "openai"),
     "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
     "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
+    # Open-weights reference models (open-vs-closed gap): public ECI only, no
+    # METR run and no AECI, so they never enter any fit. Their labs have no
+    # METR data either, so predictions fall back to the pooled ECI fit.
+    "DeepSeek-R1":             (None,                                 "DeepSeek-R1",                "deepseek"),
+    "GLM-5.2":                 (None,                                 "glm-5.2",                    "zai"),
     # Chart models with a METR result but no published index: their ECI/AECI
     # are estimated from the p50 horizon (inverted ECI fit) for display only
     # and never enter any fit.
@@ -121,6 +126,8 @@ PREDICTED_DATES = {
     "Claude Fable 5":        "2026-06-09",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
+    "DeepSeek-R1":           "2025-01-20",
+    "GLM-5.2":               "2026-06-16",
 }
 HTML = os.path.join(HERE, "..", "index.html")
 
@@ -255,9 +262,16 @@ def predicted_rows(rows, fits):
         if r["p50"] is not None or r["name"] not in PREDICTED_DATES:
             continue
         if r["lab"] != "anthropic" and r["eci"] is not None:
-            p50 = fits["eci_p50_lab"]["predict"](r["eci"], r["lab"])
-            p80 = fits["eci_p80_lab"]["predict"](r["eci"], r["lab"])
-            basis = f"ECI {r['eci']} ({r['lab']} lab-adjusted ECI fit)"
+            if r["lab"] in fits["eci_p50_lab"]["intercepts"]:
+                p50 = fits["eci_p50_lab"]["predict"](r["eci"], r["lab"])
+                p80 = fits["eci_p80_lab"]["predict"](r["eci"], r["lab"])
+                basis = f"ECI {r['eci']} ({r['lab']} lab-adjusted ECI fit)"
+            else:
+                # Lab has no METR-tested model, so no ANCOVA intercept exists;
+                # the pooled cross-lab fit is the only available route.
+                p50 = fits["eci_p50"]["predict"](r["eci"])
+                p80 = fits["eci_p80"]["predict"](r["eci"])
+                basis = f"ECI {r['eci']} (pooled ECI fit; no {r['lab']} METR data)"
         elif r["aeci"] is not None:
             aeci, basis = r["aeci"], f"AECI {r['aeci']}"
             p50 = fits["aeci_p50"]["predict"](aeci)

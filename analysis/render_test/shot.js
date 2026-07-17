@@ -32,6 +32,25 @@ const LOCAL = {
   await page.waitForTimeout(4000); // babel transform + render
   await page.screenshot({ path: 'chart_p50.png' });
 
+  // DOM assertions (cheaper than eyeballing screenshots)
+  const failures = [];
+  const labelsPresent = names => page.evaluate(ns => {
+    const have = new Set([...document.querySelectorAll('text')].map(t => t.textContent));
+    return ns.filter(n => !have.has(n));
+  }, names);
+  const OPEN_MODELS = ['DeepSeek-R1', 'GLM-5.2'];
+  // open-weights reference diamonds render in the TH view
+  for (const n of await labelsPresent(OPEN_MODELS))
+    failures.push(`TH view: missing ${n}`);
+  // "ECI lab-adj" basis: labs without an ANCOVA intercept must fall back to
+  // the pooled fit, not vanish with NaN coordinates
+  await page.getByRole('button', { name: 'ECI lab-adj' }).click();
+  await page.waitForTimeout(600);
+  for (const n of await labelsPresent(OPEN_MODELS))
+    failures.push(`lab-adj basis: missing ${n}`);
+  await page.getByRole('button', { name: 'per-lab default' }).click();
+  await page.waitForTimeout(300);
+
   // toggle p80 view
   await page.getByText('Show p80 (harder tasks)').click();
   await page.waitForTimeout(800);
@@ -42,6 +61,9 @@ const LOCAL = {
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: 'chart_eci.png' });
+  // open-weights models carry a public ECI, so they appear in score mode too
+  for (const n of await labelsPresent(OPEN_MODELS))
+    failures.push(`ECI view: missing ${n}`);
   // hover Opus 4.6 in ECI mode: tooltip should show the METR horizons line
   const o46 = await page.evaluate(() => {
     const t = [...document.querySelectorAll('text')].find(el => el.textContent === 'Opus 4.6');
@@ -127,5 +149,7 @@ const LOCAL = {
   await page.screenshot({ path: 'chart_eci_tested.png' });
 
   console.log('pageerrors:', errors.length ? errors : 'none');
+  console.log('assertions:', failures.length ? failures : 'all passed');
+  if (errors.length || failures.length) process.exitCode = 1;
   await browser.close();
 })();

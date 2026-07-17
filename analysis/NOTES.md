@@ -38,6 +38,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
   earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
+- **Open-weights reference models** (DeepSeek-R1, GLM-5.2): plotted for the
+  open-vs-closed gap. Public ECI only — no METR run, no AECI — so they enter
+  no fit anywhere (and sit below the running-max score frontier, so they can't
+  join the score trends either). Their labs have no METR-tested model, hence
+  no ANCOVA intercept: predictions route through the pooled ECI fit (flagged
+  in `basis`; the chart's "ECI lab-adj" button falls back to pooled for them).
+  Both share one gold "open-weights" color in the chart.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in
