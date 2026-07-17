@@ -87,7 +87,17 @@ MODELS = {
     "GPT-5.6 Sol":             (None,                                 "gpt-5.6-sol",                "openai"),
     "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
     "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
+    # Chart models with a METR result but no published index: their ECI/AECI
+    # are estimated from the p50 horizon (inverted ECI fit) for display only
+    # and never enter any fit.
+    "GPT-4 1106":              ("gpt_4_1106_inspect",                 None,                         "openai"),
+    "GPT-5.1 Codex Max":       ("gpt_5_1_codex_max_inspect",          None,                         "openai"),
+    "Mythos Preview (Early)":  ("claude_mythos_preview_early_inspect", None,                        "anthropic"),
 }
+
+# Keep in sync with gen_model_data.DATE_OVERRIDES: the chart plots the early
+# checkpoint at its system-card internal-availability date.
+IDX_DATE_OVERRIDES = {"Mythos Preview (Early)": "2026-02-24"}
 
 # Sensitivity-analysis inputs (see Barry's Apr 30 post). GPT-3.5's ECI comes
 # from Epoch's back-extension of the index; it is blank in the main CSV.
@@ -268,22 +278,34 @@ def predicted_rows(rows, fits):
 
 def idx_rows(rows, fits):
     """Score-mode chart rows: every model with at least one index gets both,
-    the missing one imputed through the ECI<->AECI fit and flagged."""
+    the missing one imputed through the ECI<->AECI fit and flagged. Models
+    with only a METR result get both indices estimated from the p50 horizon
+    (display only - excluded from every fit)."""
     f = fits["eci_aeci"]
     out = []
     for r in rows:
-        if (r["eci"] is None and r["aeci"] is None) or r["date"] is None:
+        if r["date"] is None:
             continue
-        eci, aeci, eci_imp, aeci_imp = r["eci"], r["aeci"], False, False
-        if eci is None:
+        eci, aeci = r["eci"], r["aeci"]
+        eci_imp = aeci_imp = est = False
+        if eci is None and aeci is None:
+            if r["p50"] is None:
+                continue
+            th = fits["eci_p50"]
+            eci = round((np.log(r["p50"]) - th["intercept"]) / th["slope"], 2)
+            aeci = round(f["predict"](eci), 2)
+            est = True
+        elif eci is None:
             eci, eci_imp = round(f["invert"](aeci), 2), True
-        if aeci is None:
+        elif aeci is None:
             aeci, aeci_imp = round(f["predict"](eci), 2), True
-        out.append({"n": CHART_NAMES.get(r["name"], r["name"].replace("Claude ", "")),
-                    "d": r["date"], "eci": eci, "aeci": aeci,
+        name = CHART_NAMES.get(r["name"], r["name"].replace("Claude ", ""))
+        out.append({"n": name, "d": IDX_DATE_OVERRIDES.get(name, r["date"]),
+                    "eci": eci, "aeci": aeci,
                     "eciImp": eci_imp, "aeciImp": aeci_imp,
-                    "aeciLo": None if aeci_imp else r["aeciLo"],
-                    "aeciHi": None if aeci_imp else r["aeciHi"],
+                    "eciEst": est, "aeciEst": est,
+                    "aeciLo": None if (aeci_imp or est) else r["aeciLo"],
+                    "aeciHi": None if (aeci_imp or est) else r["aeciHi"],
                     "p50": r["p50"], "p80": r["p80"], "l": r["lab"]})
     out.sort(key=lambda r: (r["d"], r["n"]))
     return out
@@ -311,7 +333,7 @@ def emit_js(preds, idx, fits):
     lines.append("];")
     lines.append("const IDX_RAW = [")
     for r in idx:
-        flags = "".join(f", {k}: true" for k in ("eciImp", "aeciImp") if r[k])
+        flags = "".join(f", {k}: true" for k in ("eciImp", "aeciImp", "eciEst", "aeciEst") if r[k])
         ci = (f', aeciLo: {r["aeciLo"]}, aeciHi: {r["aeciHi"]}'
               if r["aeciLo"] is not None else "")
         th = (f', p50: {r["p50"]}, p80: {r["p80"]}' if r["p50"] is not None else "")
@@ -367,6 +389,7 @@ def check_html(preds, idx, fits):
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
                       r'eci:\s*([\d.]+),\s*aeci:\s*([\d.]+)'
                       r'(,\s*eciImp:\s*true)?(,\s*aeciImp:\s*true)?'
+                      r'(,\s*eciEst:\s*true)?(,\s*aeciEst:\s*true)?'
                       r'(?:,\s*aeciLo:\s*([\d.]+),\s*aeciHi:\s*([\d.]+))?'
                       r'(?:,\s*p50:\s*([\d.]+),\s*p80:\s*([\d.]+))?', html)
         if not m:
@@ -374,12 +397,14 @@ def check_html(preds, idx, fits):
             ok = False
             continue
         compare(r["n"], [r["d"], r["eci"], r["aeci"], r["eciImp"], r["aeciImp"],
+                         r["eciEst"], r["aeciEst"],
                          r["aeciLo"] or 0.0, r["aeciHi"] or 0.0,
                          r["p50"] or 0.0, r["p80"] or 0.0],
                 [m.group(1), float(m.group(2)), float(m.group(3)),
                  bool(m.group(4)), bool(m.group(5)),
-                 float(m.group(6) or 0), float(m.group(7) or 0),
-                 float(m.group(8) or 0), float(m.group(9) or 0)])
+                 bool(m.group(6)), bool(m.group(7)),
+                 float(m.group(8) or 0), float(m.group(9) or 0),
+                 float(m.group(10) or 0), float(m.group(11) or 0)])
     print("OK: index.html PRED_RAW+IDX_RAW match fits" if ok else "*** MISMATCH ***")
     return ok
 

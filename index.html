@@ -110,6 +110,7 @@ const PRED_BASES = {
 const IDX_RAW = [
   { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
   { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
+  { n: "GPT-4 1106",          d: "2023-11-06", eci: 125.54, aeci: 125.04, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
   { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, aeciLo: 123.9, aeciHi: 126.8, p50: 3.952262, p80: 0.638973, l: "anthropic" },
   { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
   { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
@@ -124,11 +125,13 @@ const IDX_RAW = [
   { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
   { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, aeciLo: 144.3, aeciHi: 148.2, l: "anthropic" },
   { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
+  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 150.83, aeci: 149.39, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
   { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, aeciLo: 146.7, aeciHi: 150.7, p50: 292.994594, p80: 49.430584, l: "anthropic" },
   { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
   { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
   { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, aeciLo: 150.4, aeciHi: 155.3, p50: 718.80683, p80: 69.874587, l: "anthropic" },
   { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
+  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 160.54, aeci: 158.74, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
   { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
   { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
   { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
@@ -149,8 +152,8 @@ const INFO = (() => {
   for (const m of PRED_RAW) if (get(m.n).p50 == null)
     Object.assign(get(m.n), { p50: m.p, p80: m.p80, thSrc: "predicted" });
   for (const m of IDX_RAW) Object.assign(get(m.n), {
-    eci: m.eci, eciSrc: m.eciImp ? "imputed" : "measured",
-    aeci: m.aeci, aeciSrc: m.aeciImp ? "imputed" : "measured",
+    eci: m.eci, eciSrc: m.eciImp ? "imputed" : m.eciEst ? "est. from TH" : "measured",
+    aeci: m.aeci, aeciSrc: m.aeciImp ? "imputed" : m.aeciEst ? "est. from TH" : "measured",
     aeciLo: m.aeciLo, aeciHi: m.aeciHi,
   });
   for (const r of Object.values(out)) {
@@ -184,9 +187,10 @@ const LBL = {
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
 };
-// Permanent labels suppressed in the (crowded) time-horizon view only;
-// score modes still show them.
+// Permanent labels suppressed per view where they'd collide; the other view
+// still shows them.
 const LBL_TH_HIDE = new Set(["Fable 5", "GPT-5.6 Sol", "GPT-5.3 Codex"]);
+const LBL_SC_HIDE = new Set(["Mythos Preview (Early)"]); // sits on top of Mythos Preview in score space
 
 // ── Trend fits ──
 const DAY_MS = 86400000;
@@ -271,7 +275,10 @@ function App() {
   const [showFast, setShowFast] = useState(true);
   const [showDecel, setShowDecel] = useState(true);
   const [useP80, setUseP80] = useState(false);
-  const [showPreds, setShowPreds] = useState(true);
+  // Hide models whose value for the ACTIVE view's metric is not a real
+  // measurement: predicted diamonds in the TH view; imputed/estimated points
+  // in the score views (where the frontier trend then refits to measured data).
+  const [testedOnly, setTestedOnly] = useState(false);
   const [yMode, setYMode] = useState("th"); // "th" | "eci" | "aeci"
   const isScore = yMode !== "th";
   const [pinScore, setPinScore] = useState(false); // pin score fast trend to the system card's 13.5 pts/yr
@@ -318,16 +325,19 @@ function App() {
       ...m, ts: new Date(m.d).getTime(), idx: true,
       sc: yMode === "eci" ? m.eci : m.aeci,
       imp: yMode === "eci" ? !!m.eciImp : !!m.aeciImp,
+      est: yMode === "eci" ? !!m.eciEst : !!m.aeciEst,
       // measured AECI values carry system-card CIs; ECI has none published
       lo: yMode === "aeci" && !m.aeciImp ? m.aeciLo : null,
       hi: yMode === "aeci" && !m.aeciImp ? m.aeciHi : null,
-    }));
-  }, [yMode, isScore]);
+    })).filter(m => !testedOnly || (!m.imp && !m.est));
+  }, [yMode, isScore, testedOnly]);
 
   // Cross-lab running-max frontier on the active score (same rule as the
   // time-horizon SOTA set: a model is frontier if it beats every earlier one).
+  // Estimated-from-TH points never join: an ECI derived from a horizon must
+  // not steer the score trend.
   const isIdxFrontier = useMemo(() => {
-    const sorted = [...idxModels].sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
+    const sorted = idxModels.filter(m => !m.est).sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
     const set = new Set(); let mx = -Infinity;
     for (const m of sorted) { if (m.sc > mx) { set.add(m.n + m.d); mx = m.sc; } }
     return m => set.has(m.n + m.d);
@@ -458,9 +468,9 @@ function App() {
     for (const d of trendData)
       for (const k of ["slow","fast","decel"]) if (d[k] != null && d[k] > mx) mx = d[k];
     for (const m of models) { const h = m.hi != null ? m.hi : m.p; if (h > mx) mx = h; }
-    if (showPreds) for (const m of predModels) if (m.p > mx) mx = m.p;
+    if (!testedOnly) for (const m of predModels) if (m.p > mx) mx = m.p;
     return niceCeil(mx);
-  }, [trendData, models, predModels, showPreds]);
+  }, [trendData, models, predModels, testedOnly]);
   const yLogBot = Math.log(YLO), yLogTop = Math.log(yhiDyn);
   // Zoom state (ly0/ly1) lives in the active axis's units: ln(hours) for the
   // time-horizon view, raw score points for ECI/AECI. Mode switches reset zoom,
@@ -720,7 +730,7 @@ function App() {
       // ── Score mode: index points; imputed values are dashed diamonds. ──
       const sels = idxModels.map(m => {
         const cx=xS(m.ts), cy=yS(m.sc);
-        const c=COL[m.l], lb=LBL[m.n];
+        const c=COL[m.l], lb=LBL_SC_HIDE.has(m.n)?undefined:LBL[m.n];
         if (isNaN(cx)||isNaN(cy)) return null;
         if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
         const onFrontier = isIdxFrontier(m);
@@ -771,7 +781,7 @@ function App() {
       </g>);
     });
     // Predicted horizons (AECI conversions): dashed hollow diamonds.
-    const pels = !showPreds ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE).map(m => {
+    const pels = testedOnly ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE).map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
       const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
       if (isNaN(cx)||isNaN(cy)) return null;
@@ -897,7 +907,8 @@ function App() {
             {!m.idx && !m.pred && !isSota(m) &&
               <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
             {m.idx && !isIdxFrontier(m) &&
-              <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Off-frontier — excluded from trend fit</div>}
+              <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>
+                {m.est ? "Estimated — excluded from trend fit" : "Off-frontier — excluded from trend fit"}</div>}
           </div>);
         })()}
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -971,7 +982,7 @@ function App() {
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
                 stroke="#999" strokeWidth={1.5} strokeDasharray="3 2"/></svg>
-              imputed via ECI↔AECI fit
+              imputed (via ECI↔AECI fit) or estimated (from TH)
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <svg width={12} height={12}><circle cx={6} cy={6} r={4.5} fill="#12121f" stroke="#999" strokeWidth={2}/></svg>
@@ -1008,14 +1019,12 @@ function App() {
               background:useP80?"#f0c050":"transparent",transition:"background 0.15s"}}/>
             <span style={{color:useP80?"#ccc":"#777",transition:"color 0.15s"}}>Show p80 (harder tasks)</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
-            onClick={()=>setShowPreds(v=>!v)}>
-            <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill={showPreds?"#12121f":"transparent"}
-              stroke={COL.anthropic} strokeWidth={1.5} strokeDasharray="3 2" opacity={showPreds?1:0.5}/></svg>
-            <span style={{color:showPreds?"#ccc":"#777",transition:"color 0.15s"}}>Predicted horizons (no METR run)</span>
-          </div>
-          {showPreds && <div style={{display:"flex",alignItems:"center",gap:4}}>
-            <span style={{color:"#777"}}>via fit:</span>
+          {!testedOnly && <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{display:"flex",alignItems:"center",gap:6,marginRight:2}}>
+              <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
+                stroke={COL.anthropic} strokeWidth={1.5} strokeDasharray="3 2"/></svg>
+              <span style={{color:"#999"}}>predicted, via fit:</span>
+            </span>
             {[["default","per-lab default"],["aeci","AECI"],["eci","ECI pooled"],["lab","ECI lab-adj"]].map(([v,lb])=>(
               <button key={v} onClick={()=>setPredBasis(v)} style={{
                 background:predBasis===v?"#2a2a40":"transparent",color:predBasis===v?"#eee":"#777",
@@ -1029,6 +1038,12 @@ function App() {
               background:fitFast?COL.fast:"transparent",transition:"background 0.15s"}}/>
             <span style={{color:fitFast?"#ccc":"#777",transition:"color 0.15s"}}>Fit fast slope to data</span>
           </div></>}
+          <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
+            onClick={()=>setTestedOnly(v=>!v)}>
+            <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid #9ab7d3",
+              background:testedOnly?"#9ab7d3":"transparent",transition:"background 0.15s"}}/>
+            <span style={{color:testedOnly?"#ccc":"#777",transition:"color 0.15s"}}>Show tested models only</span>
+          </div>
           {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
