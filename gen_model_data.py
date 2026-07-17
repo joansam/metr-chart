@@ -46,6 +46,12 @@ SELECTION = {
     "claude_mythos_preview_early_inspect":("Mythos Preview (Early)",    "anthropic"),
 }
 
+# Plot-date overrides where the YAML's release_date isn't the right date.
+# Mythos Preview (Early): the system card reports Feb 24 2026 as when Mythos
+# Preview became available for internal use; the YAML carries the April 7
+# public-launch date.
+DATE_OVERRIDES = {"claude_mythos_preview_early_inspect": "2026-02-24"}
+
 
 def parse_yaml(path):
     text = open(path, encoding="utf-8").read()
@@ -74,7 +80,7 @@ def build_rows(Y):
         if key not in Y:
             raise SystemExit(f"ERROR: '{key}' not found in {YAML}")
         y = Y[key]
-        rows.append({"n": name, "d": y["date"], "l": lab,
+        rows.append({"n": name, "d": DATE_OVERRIDES.get(key, y["date"]), "l": lab,
                      "p50": y["p50"], "p80": y["p80"]})
     rows.sort(key=lambda r: r["d"])
     return rows
