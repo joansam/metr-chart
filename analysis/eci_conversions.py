@@ -298,6 +298,10 @@ def emit_js(preds, idx, fits):
                     ("eciAeci", "eci_aeci")]:
         f = fits[key]
         lines.append(f'  {js + ":":9} {{ a: {f["intercept"]:.4f}, b: {f["slope"]:.6f} }},')
+    for js, key in [("eciP50Lab", "eci_p50_lab"), ("eciP80Lab", "eci_p80_lab")]:
+        f = fits[key]
+        ints = ", ".join(f"{lab}: {v:.4f}" for lab, v in sorted(f["intercepts"].items()))
+        lines.append(f'  {js + ":":9} {{ b: {f["slope"]:.6f}, {ints} }},')
     lines.append("};")
     lines.append("const PRED_RAW = [")
     for r in preds:
@@ -338,6 +342,17 @@ def check_html(preds, idx, fits):
             continue
         compare(js, [round(fits[key]["intercept"], 4), round(fits[key]["slope"], 6)],
                 [float(m.group(1)), float(m.group(2))])
+    for js, key in [("eciP50Lab", "eci_p50_lab"), ("eciP80Lab", "eci_p80_lab")]:
+        m = re.search(js + r':\s*\{ b: (-?[\d.]+), anthropic: (-?[\d.]+), '
+                      r'google: (-?[\d.]+), openai: (-?[\d.]+) \}', html)
+        if not m:
+            print(f"[MISSING fit] {js}")
+            ok = False
+            continue
+        f = fits[key]
+        compare(js, [round(f["slope"], 6)] +
+                    [round(f["intercepts"][lab], 4) for lab in ("anthropic", "google", "openai")],
+                list(map(float, m.groups())))
 
     for r in preds:
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'

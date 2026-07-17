@@ -77,6 +77,8 @@ const FITS = {
   aeciP50:  { a: -22.2671, b: 0.188957 },
   aeciP80:  { a: -23.2818, b: 0.182767 },
   eciAeci:  { a: 4.1639, b: 0.962824 },
+  eciP50Lab: { b: 0.163414, anthropic: -18.9260, google: -19.4902, openai: -19.3588 },
+  eciP80Lab: { b: 0.156548, anthropic: -19.7825, google: -19.8701, openai: -20.0072 },
 };
 const PRED_RAW = [
   { n: "Sonnet 4.5",      d: "2025-09-29", basis: "AECI 145.9", p: 200.680311, p80: 29.484408, l: "anthropic" },
@@ -88,7 +90,18 @@ const PRED_RAW = [
   { n: "Mythos 5",        d: "2026-06-09", basis: "AECI 161.29", p: 3676.663539, p80: 491.098723, l: "anthropic" },
   { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 161.77 (openai lab-adjusted ECI fit)", p: 1184.012443, p80: 203.900420, l: "openai" },
 ];
-const PRED = PRED_RAW.map(m => ({ ...m, p: m.p/60, p80: m.p80/60 }));
+// Alternative conversion routes for the predicted horizons, computed from the
+// generated FITS constants. "default" uses the PRED_RAW values (AECI fit for
+// Anthropic models, lab-adjusted ECI fit for other labs).
+const PRED_BASES = {
+  default: null,
+  aeci: r => [Math.exp(FITS.aeciP50.a + FITS.aeciP50.b * r.aeci),
+              Math.exp(FITS.aeciP80.a + FITS.aeciP80.b * r.aeci)],
+  eci:  r => [Math.exp(FITS.eciP50.a + FITS.eciP50.b * r.eci),
+              Math.exp(FITS.eciP80.a + FITS.eciP80.b * r.eci)],
+  lab:  r => [Math.exp(FITS.eciP50Lab[r.l] + FITS.eciP50Lab.b * r.eci),
+              Math.exp(FITS.eciP80Lab[r.l] + FITS.eciP80Lab.b * r.eci)],
+};
 
 // ── Capability-index scores for the ECI / AECI y-axis modes. Every model with
 // either index gets both: the missing one is imputed through the fitted
@@ -171,6 +184,9 @@ const LBL = {
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
 };
+// Permanent labels suppressed in the (crowded) time-horizon view only;
+// score modes still show them.
+const LBL_TH_HIDE = new Set(["Fable 5", "GPT-5.6 Sol", "GPT-5.3 Codex"]);
 
 // ── Trend fits ──
 const DAY_MS = 86400000;
@@ -259,6 +275,7 @@ function App() {
   const [yMode, setYMode] = useState("th"); // "th" | "eci" | "aeci"
   const isScore = yMode !== "th";
   const [pinScore, setPinScore] = useState(false); // pin score fast trend to the system card's 13.5 pts/yr
+  const [predBasis, setPredBasis] = useState("default"); // which fit converts indices to predicted horizons
   const [fitFast, setFitFast] = useState(false); // false = fixed 3.5-mo, true = fitted slope
   const [decayPct, setDecayPct] = useState(20);   // % growth-rate decay per horizon doubling
   const [decayStartStr, setDecayStartStr] = useState("2026-06-01"); // when the slowdown begins
@@ -283,10 +300,15 @@ function App() {
     return { ...m, ts };
   }), [useP80]);
 
-  // Predicted points (AECI conversions) — never enter the SOTA set or trend fits.
-  const predModels = useMemo(() => PRED.map(m => ({
-    ...m, ts: new Date(m.d).getTime(), pred: true, p: useP80 ? m.p80 : m.p,
-  })), [useP80]);
+  // Predicted points (index conversions) — never enter the SOTA set or trend
+  // fits. pm50/pm80 are minutes under the selected conversion basis.
+  const predModels = useMemo(() => PRED_RAW.map(m => {
+    let pm50 = m.p, pm80 = m.p80; // "default": generated per-model route
+    const calc = PRED_BASES[predBasis];
+    if (calc) [pm50, pm80] = calc({ ...INFO[m.n], l: m.l });
+    return { ...m, ts: new Date(m.d).getTime(), pred: true,
+             pm50, pm80, p: (useP80 ? pm80 : pm50) / 60 };
+  }), [useP80, predBasis]);
 
   // ── Score-mode data (ECI / AECI y-axis): sc = active score, imp = imputed
   // through the fitted ECI<->AECI line, other = the source value it came from. ──
@@ -728,7 +750,7 @@ function App() {
     const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
     const els = vis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL[m.n];
+      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
       if (isNaN(cx)||isNaN(cy)) return null;
       // Only register hover targets for dots whose center is inside the plot area.
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
@@ -751,7 +773,7 @@ function App() {
     // Predicted horizons (AECI conversions): dashed hollow diamonds.
     const pels = !showPreds ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE).map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL[m.n];
+      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
       if (isNaN(cx)||isNaN(cy)) return null;
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
       return (<g key={"pred"+m.n} className={`mp${lb?' al':''}`}>
@@ -821,7 +843,7 @@ function App() {
         <p style={{fontSize:14,color:"#888",marginBottom:20,lineHeight:1.5}}>
           SOTA model performance (dots with 95% CI) against exponential trend fits.
           Dashed diamonds are predicted horizons for models METR hasn't run, converted
-          from Anthropic's internal ECI (see <code style={{fontSize:12}}>analysis/</code>).{" "}
+          from ECI/AECI capability indices (see <code style={{fontSize:12}}>analysis/</code>).{" "}
           <span style={{color:COL.openai}}>OpenAI</span>{" / "}
           <span style={{color:COL.anthropic}}>Anthropic</span>{" / "}
           <span style={{color:COL.google}}>Google</span>
@@ -851,8 +873,10 @@ function App() {
             <div style={{fontWeight:700,color:COL[m.l],marginBottom:2}}>{m.n}</div>
             <div>{ds}</div>
             {(()=>{ // unified body: TH, ECI, AECI for every model, provenance tagged
-              const r = INFO[m.n];
-              if (!r) return null;
+              const r0 = INFO[m.n];
+              if (!r0) return null;
+              // predicted horizons follow the selected conversion basis
+              const r = m.pred ? { ...r0, p50: m.pm50, p80: m.pm80 } : r0;
               const tag = s => s === "measured" ? "" : ` (${s})`;
               const hl = (key, txt) => key === hlKey
                 ? <b style={{color:"#eee"}}>{txt}</b> : <>{txt}</>;
@@ -988,8 +1012,17 @@ function App() {
             onClick={()=>setShowPreds(v=>!v)}>
             <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill={showPreds?"#12121f":"transparent"}
               stroke={COL.anthropic} strokeWidth={1.5} strokeDasharray="3 2" opacity={showPreds?1:0.5}/></svg>
-            <span style={{color:showPreds?"#ccc":"#777",transition:"color 0.15s"}}>AECI predictions (no METR run)</span>
+            <span style={{color:showPreds?"#ccc":"#777",transition:"color 0.15s"}}>Predicted horizons (no METR run)</span>
           </div>
+          {showPreds && <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{color:"#777"}}>via fit:</span>
+            {[["default","per-lab default"],["aeci","AECI"],["eci","ECI pooled"],["lab","ECI lab-adj"]].map(([v,lb])=>(
+              <button key={v} onClick={()=>setPredBasis(v)} style={{
+                background:predBasis===v?"#2a2a40":"transparent",color:predBasis===v?"#eee":"#777",
+                border:"1px solid #444",borderRadius:4,padding:"2px 8px",cursor:"pointer",
+                fontFamily:FONT,fontSize:12}}>{lb}</button>
+            ))}
+          </div>}
           <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
             onClick={()=>setFitFast(v=>!v)}>
             <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.fast,
