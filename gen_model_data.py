@@ -49,8 +49,10 @@ SELECTION = {
 # Plot-date overrides where the YAML's release_date isn't the right date.
 # Mythos Preview (Early): the system card reports Feb 24 2026 as when Mythos
 # Preview became available for internal use; the YAML carries the April 7
-# public-launch date.
-DATE_OVERRIDES = {"claude_mythos_preview_early_inspect": "2026-02-24"}
+# public-launch date. Each override is emitted as an inline comment on its
+# M_RAW row so the hand-picked date is self-documenting in index.html.
+DATE_OVERRIDES = {"claude_mythos_preview_early_inspect":
+                  ("2026-02-24", "system-card internal-availability date; YAML release_date is 2026-04-07")}
 
 
 def parse_yaml(path):
@@ -80,7 +82,9 @@ def build_rows(Y):
         if key not in Y:
             raise SystemExit(f"ERROR: '{key}' not found in {YAML}")
         y = Y[key]
-        rows.append({"n": name, "d": DATE_OVERRIDES.get(key, y["date"]), "l": lab,
+        ovr = DATE_OVERRIDES.get(key)
+        rows.append({"n": name, "d": ovr[0] if ovr else y["date"], "l": lab,
+                     "note": ovr[1] if ovr else None,
                      "p50": y["p50"], "p80": y["p80"]})
     rows.sort(key=lambda r: r["d"])
     return rows
@@ -96,11 +100,12 @@ def emit(rows):
         p, lo, hi = r["p50"]
         p80, lo80, hi80 = r["p80"]
         name = f'"{r["n"]}",'
+        note = f'  // date override: {r["note"]}' if r["note"] else ""
         lines.append(
             f'  {{ n: {name:24} d: "{r["d"]}", '
             f"p: {fmt(p)}, lo: {fmt(lo)}, hi: {fmt(hi)}, "
             f"p80: {fmt(p80)}, lo80: {fmt(lo80)}, hi80: {fmt(hi80)}, "
-            f'l: "{r["l"]}" }},')
+            f'l: "{r["l"]}" }},{note}')
     lines.append("];")
     return "\n".join(lines)
 

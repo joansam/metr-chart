@@ -273,8 +273,17 @@ def idx_rows(rows, fits):
     return out
 
 
-def emit_js(preds, idx):
-    lines = ["const PRED_RAW = ["]
+def emit_js(preds, idx, fits):
+    lines = ["// Conversion-fit constants (same fits as this script's report):",
+             "// ln(TH_minutes) = a + b*score for the TH fits; AECI = a + b*ECI for eciAeci.",
+             "const FITS = {"]
+    for js, key in [("eciP50", "eci_p50"), ("eciP80", "eci_p80"),
+                    ("aeciP50", "aeci_p50"), ("aeciP80", "aeci_p80"),
+                    ("eciAeci", "eci_aeci")]:
+        f = fits[key]
+        lines.append(f'  {js + ":":9} {{ a: {f["intercept"]:.4f}, b: {f["slope"]:.6f} }},')
+    lines.append("};")
+    lines.append("const PRED_RAW = [")
     for r in preds:
         lines.append(f'  {{ n: {chr(34) + r["n"] + chr(34) + ",":18} d: "{r["d"]}", '
                      f'basis: "{r["basis"]}", p: {r["p"]:.6f}, p80: {r["p80"]:.6f}, '
@@ -289,7 +298,7 @@ def emit_js(preds, idx):
     return "\n".join(lines)
 
 
-def check_html(preds, idx):
+def check_html(preds, idx, fits):
     html = open(HTML, encoding="utf-8").read()
     ok = True
 
@@ -299,6 +308,17 @@ def check_html(preds, idx):
             if (w != g) if isinstance(w, str) else abs(w - g) > 1e-4 * max(1, abs(w)):
                 print(f"[DIFF] {name}: {w} != {g}")
                 ok = False
+
+    for js, key in [("eciP50", "eci_p50"), ("eciP80", "eci_p80"),
+                    ("aeciP50", "aeci_p50"), ("aeciP80", "aeci_p80"),
+                    ("eciAeci", "eci_aeci")]:
+        m = re.search(js + r':\s*\{ a: (-?[\d.]+), b: (-?[\d.]+) \}', html)
+        if not m:
+            print(f"[MISSING fit] {js}")
+            ok = False
+            continue
+        compare(js, [round(fits[key]["intercept"], 4), round(fits[key]["slope"], 6)],
+                [float(m.group(1)), float(m.group(2))])
 
     for r in preds:
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
@@ -425,9 +445,9 @@ def main():
         preds = predicted_rows(base_rows, base_fits)
         idx = idx_rows(assemble(with_gpt35=True)[0], base_fits)
         if args.emit_js:
-            print(emit_js(preds, idx))
+            print(emit_js(preds, idx, base_fits))
         if args.check_html:
-            sys.exit(0 if check_html(preds, idx) else 1)
+            sys.exit(0 if check_html(preds, idx, base_fits) else 1)
     elif args.eci is not None or args.aeci is not None:
         convert(fits, args.eci, args.aeci, args.lab)
     else:
