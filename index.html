@@ -98,6 +98,45 @@ const PRED_RAW = [
   { n: "Kimi K3",         d: "2026-07-16", basis: "ECI 155.62 (pooled ECI fit; no moonshot METR data)", p: 474.634783, p80: 85.200273, l: "moonshot" },
   { n: "Opus 5",          d: "2026-07-24", basis: "AECI 162.1", p: 4284.744152, p80: 569.458788, l: "anthropic" },
 ];
+// Hover copy for the prediction-basis buttons. Stats quoted here come from
+// analysis/eci_conversions.py's report and move only when the fits are
+// regenerated (--emit-js), so re-check them if FITS above changes.
+const BASIS_DOC = {
+  default: ["per-lab default",
+    "Every model takes the route best supported by the data that exists for it, "
+    + "rather than one uniform rule. Anthropic models go through the AECI fit. "
+    + "Other labs that have a METR-tested model of their own (OpenAI, Google) go "
+    + "through the lab-adjusted ECI fit. Labs with no METR result at all "
+    + "(DeepSeek, Z.ai, Moonshot) have no intercept to use, so they fall back to "
+    + "the pooled ECI fit. Fable 5 is the odd one out: it has a public ECI but no "
+    + "published AECI, so its ECI is converted to an implied AECI first. Each "
+    + "model's tooltip names the route it actually took."],
+  aeci: ["AECI — Anthropic's internal index",
+    "Puts every model through the AECI fit: ln(horizon) regressed on AECI over "
+    + "the 7 Claude models that have both an AECI and a METR run (R²=0.997; the "
+    + "horizon doubles every 3.67 AECI points). Anthropic publishes AECI only for "
+    + "its own models, so every non-Anthropic diamond here is a two-step "
+    + "extrapolation — public ECI converted to an implied AECI through the fitted "
+    + "ECI↔AECI line (n=10 Claude pairs), then pushed through a Claude-only "
+    + "curve. It is the most optimistic of the four for that reason."],
+  eci: ["ECI pooled — one line for every lab",
+    "A single cross-lab regression of ln(horizon) on Epoch's public ECI, over all "
+    + "20 models that have both (R²=0.970; doubles every 4.38 ECI points). Lab "
+    + "identity is ignored entirely. That is the honest choice when you don't "
+    + "want per-lab assumptions, and also its weakness: Claude models have "
+    + "historically sat about 1.5x above this line at equal ECI, so pooling "
+    + "under-prices them and drags everyone toward the middle. It is the only "
+    + "route available for labs with no METR-tested model."],
+  lab: ["ECI lab-adj — per-lab intercepts",
+    "The same ECI data as pooled, fitted as an ANCOVA: one shared slope, but a "
+    + "separate intercept per lab (R²=0.987, n=20). It keeps the cross-lab trend "
+    + "while letting each lab sit at its own level — Anthropic's intercept is "
+    + "~1.5x OpenAI's and ~1.8x Google's, meaning a Claude model at the same "
+    + "public ECI has historically delivered around 1.5x the horizon. Only labs "
+    + "with a METR-tested model have an intercept; the rest quietly fall back to "
+    + "the pooled line."],
+};
+
 // Alternative conversion routes for the predicted horizons, computed from the
 // generated FITS constants. "default" uses the PRED_RAW values (AECI fit for
 // Anthropic models, lab-adjusted ECI fit for other labs).
@@ -264,7 +303,11 @@ function decelDoublingMonths(fastFit, t, startMs, decayFrac) {
 const CS = new Date(2022,0,1).getTime();
 const CE = new Date(2029,0,1).getTime();
 const TODAY = Date.now();
-const YLO = 0.0001, YHI = 1000;
+// Y floor sits on the lowest tick (0.1 min) rather than a decade below it —
+// that decade was empty, since the lowest on-chart CI bound is GPT-3.5
+// Instruct's p80 at 0.14 min. (GPT-2 and davinci-002 go lower but predate the
+// 2022 chart start, so they never render.)
+const YLO = 1/600, YHI = 1000;
 const clamp = (lo, v, hi) => Math.min(Math.max(v, lo), hi);
 // Prose stays at a readable measure even when the chart shell grows past it.
 const PROSE_W = 900;
@@ -287,9 +330,11 @@ const MS = [
 ];
 
 // Explicit Y-axis ticks at meaningful durations
-const YTICKS = [0.001, 1/60, 0.1, 1, 8, 40, 160, 480, 960, 1920, 5760, 11520];
+// Ticks are in HOURS. The bottom one used to be 0.001 h labelled "0.1 min",
+// which is really 0.06 min; it is now the 0.1 min it claims to be.
+const YTICKS = [1/600, 1/60, 0.1, 1, 8, 40, 160, 480, 960, 1920, 5760, 11520];
 const YTICK_LABELS = {
-  0.001: "0.1 min", [1/60]: "1 min", 0.1: "6 min", 1: "1 hour",
+  [1/600]: "0.1 min", [1/60]: "1 min", 0.1: "6 min", 1: "1 hour",
   8: "1 day", 40: "1 week", 160: "1 month", 480: "3 mo",
   960: "6 mo", 1920: "1 yr", 5760: "3 yr", 11520: "6 yr",
 };
@@ -319,6 +364,7 @@ function App() {
   const isScore = yMode !== "th";
   const [pinScore, setPinScore] = useState(false); // pin score fast trend to the system card's 13.5 pts/yr
   const [predBasis, setPredBasis] = useState("default"); // which fit converts indices to predicted horizons
+  const [basisTip, setBasisTip] = useState(null); // which basis button is hovered/focused
   const [fitFast, setFitFast] = useState(false); // false = fixed 3.5-mo, true = fitted slope
   const [decayPct, setDecayPct] = useState(20);   // % growth-rate decay per horizon doubling
   const [decayStartStr, setDecayStartStr] = useState(DECAY_START_DEFAULT); // when the slowdown begins
@@ -353,6 +399,18 @@ function App() {
     return { ...m, ts: new Date(m.d).getTime(), pred: true,
              pm50, pm80, p: (useP80 ? pm80 : pm50) / 60 };
   }), [useP80, predBasis]);
+
+  // Which conversion route a predicted point actually took, for its tooltip.
+  // On "default" that is the per-model string baked into PRED_RAW; on an
+  // explicit basis it is that fit — except "lab", which silently falls back to
+  // the pooled line for labs that have no ANCOVA intercept.
+  const basisNote = m => {
+    if (predBasis === "default") return m.basis;
+    if (predBasis === "aeci") return "AECI fit (Claude-only regression)";
+    if (predBasis === "eci") return "pooled cross-lab ECI fit";
+    return FITS.eciP50Lab[m.l] != null ? `${m.l} lab-adjusted ECI fit`
+                                       : `pooled ECI fit (no ${m.l} intercept)`;
+  };
 
   // ── Score-mode data (ECI / AECI y-axis): sc = active score, imp = imputed
   // through the fitted ECI<->AECI line, other = the source value it came from. ──
@@ -1006,6 +1064,8 @@ function App() {
                   <span style={{color:"#999"}}>{tag(r.aeciSrc)}</span></div>}
               </>);
             })()}
+            {m.pred && !m.idx && basisNote(m) &&
+              <div style={{fontSize:11,color:"#8fa8c8",marginTop:3}}>via {basisNote(m)}</div>}
             {!m.idx && m.lo != null && m.hi != null &&
               <div style={{fontSize:11,color:"#777",marginTop:2}}>95% CI ({useP80?"p80":"p50"}): {fmtH(m.lo)} – {fmtH(m.hi)}</div>}
             {m.idx && yMode === "aeci" && m.lo != null &&
@@ -1125,18 +1185,29 @@ function App() {
               background:useP80?"#f0c050":"transparent",transition:"background 0.15s"}}/>
             <span style={{color:useP80?"#ccc":"#777",transition:"color 0.15s"}}>Show p80 (harder tasks)</span>
           </div>
-          {!testedOnly && <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {!testedOnly && <div style={{display:"flex",alignItems:"center",gap:4,position:"relative"}}>
             <span style={{display:"flex",alignItems:"center",gap:6,marginRight:2}}>
               <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
                 stroke={COL.anthropic} strokeWidth={1.5} strokeDasharray="3 2"/></svg>
               <span style={{color:"#999"}}>predicted, via fit:</span>
             </span>
             {[["default","per-lab default"],["aeci","AECI"],["eci","ECI pooled"],["lab","ECI lab-adj"]].map(([v,lb])=>(
-              <button key={v} onClick={()=>setPredBasis(v)} style={{
+              <button key={v} onClick={()=>setPredBasis(v)}
+                onMouseEnter={()=>setBasisTip(v)} onMouseLeave={()=>setBasisTip(null)}
+                onFocus={()=>setBasisTip(v)} onBlur={()=>setBasisTip(null)} style={{
                 background:predBasis===v?"#2a2a40":"transparent",color:predBasis===v?"#eee":"#777",
                 border:"1px solid #444",borderRadius:4,padding:"2px 8px",cursor:"pointer",
                 fontFamily:FONT,fontSize:12}}>{lb}</button>
             ))}
+            {/* One popover for the whole group, anchored to the group's left edge
+                so it can't run off-screen behind the right-most button. */}
+            {basisTip && <div style={{position:"absolute",bottom:"calc(100% + 8px)",left:0,zIndex:30,
+              width:"min(440px, 88vw)",background:"#1a1a2e",border:"1px solid #444",borderRadius:6,
+              padding:"10px 13px",boxShadow:"0 4px 14px rgba(0,0,0,0.5)",pointerEvents:"none"}}>
+              <div style={{fontFamily:FONT_D,fontSize:12,fontWeight:700,color:"#eee",marginBottom:5}}>
+                {BASIS_DOC[basisTip][0]}</div>
+              <div style={{fontSize:12,lineHeight:1.55,color:"#bbb"}}>{BASIS_DOC[basisTip][1]}</div>
+            </div>}
           </div>}
           <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
             onClick={()=>setFitFast(v=>!v)}>

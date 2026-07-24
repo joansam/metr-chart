@@ -110,6 +110,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Resulting plot aspect is ~2.1:1 at 1080p and ~1.8:1 at 1440p. Prose blocks
   keep a separate `PROSE_W` so line length stays readable when the chart is
   wider than text should be.
+- **Prediction-basis hover copy** lives in `BASIS_DOC` in index.html and quotes
+  fit statistics (R², n, points-per-doubling, the ~1.5x Anthropic/OpenAI
+  intercept ratio) straight from this script's report. Regenerating the fits
+  can move those numbers, so re-read the report and update the copy whenever
+  `--emit-js` changes FITS. Predicted dots also carry a "via ..." line naming
+  the route actually used, which tracks the selected basis rather than the
+  baked-in `PRED_RAW.basis` string.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in
