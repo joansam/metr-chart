@@ -62,10 +62,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   trend from 14.17 to 14.21 pts/yr (ECI: 14.95 -> 14.98). The two are within
   each other's CIs anyway (Opus 5 [158.0, 167.3] vs Mythos 5 [157.3, 165.4]),
   and "pin new trend to 13.5/yr" reproduces the card's rate exactly.
-- **Kimi K3 is not an open-weights marker**: Moonshot shipped K2.x as open
-  weights but K3 is API-access only (per Epoch's `Model accessibility`), so it
-  gets its own color rather than the shared gold. It routes like the
-  open-weights models for a different reason — no METR-tested Moonshot model,
+- **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
+  *API access* — Moonshot shipped K2.x as open weights but had not released
+  K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
+  anyway (owner's call, on the expectation that the weights are imminent), so
+  the gold color is a deliberate divergence from `Model accessibility` in the
+  CSV rather than a read of it. Revisit if the release doesn't happen. Its fit
+  routing is unrelated to this and unaffected: no METR-tested Moonshot model,
   hence no ANCOVA intercept, hence the pooled ECI fit.
 - **Open-weights reference models** (DeepSeek-R1, GLM-5.2): plotted for the
   open-vs-closed gap. Public ECI only — no METR run, no AECI — so they enter
@@ -74,6 +77,11 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   no ANCOVA intercept: predictions route through the pooled ECI fit (flagged
   in `basis`; the chart's "ECI lab-adj" button falls back to pooled for them).
   Both share one gold "open-weights" color in the chart.
+- **Slowdown scenario defaults**: it is a hypothetical, so it starts switched
+  OFF, and its start date defaults to one year from whenever the page is
+  opened (`DECAY_START_DEFAULT`) rather than a fixed date that would silently
+  age into the past. The toggle label and legend both derive their year from
+  that date, so nothing has to be hand-edited as time passes.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in

@@ -28,10 +28,10 @@ const {
 
 const COL = {
   anthropic: "#d97757", openai: "#18a683", google: "#4285F4",
-  // open-weights reference labs share one color (open-vs-closed gap markers)
-  deepseek: "#d4b24e", zai: "#d4b24e",
-  // Moonshot's K3 is API-access only, so it is not an open-weights marker
-  moonshot: "#c96bb0",
+  // open-weights reference labs share one color (open-vs-closed gap markers).
+  // Moonshot is counted here on the expectation that K3 weights are imminent;
+  // Epoch still lists K3 as API access (see analysis/NOTES.md).
+  deepseek: "#d4b24e", zai: "#d4b24e", moonshot: "#d4b24e",
   slow: "#7eb8da", fast: "#f06060", decel: "#c084fc",
 };
 const FONT = "Georgia, 'Times New Roman', serif";
@@ -264,6 +264,17 @@ const CE = new Date(2029,0,1).getTime();
 const TODAY = Date.now();
 const YLO = 0.0001, YHI = 1000;
 
+// Default start of the hypothetical slowdown: one year out from whenever the
+// page is opened, so the scenario always begins in the future instead of
+// drifting into the past as a hardcoded date ages. Built as a YYYY-MM-DD string
+// because that is what the <input type="date"> control binds to; UTC parts keep
+// it consistent with `new Date("YYYY-MM-DD")`, which parses as UTC midnight.
+const DECAY_START_DEFAULT = (() => {
+  const d = new Date(TODAY);
+  d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+})();
+
 const MS = [
   { h: 1/60, lb: "1 minute" }, { h: 1, lb: "1 hour" },
   { h: 8, lb: "8h (1 day)" }, { h: 40, lb: "40h (1 week)" },
@@ -293,7 +304,7 @@ const fmtH = h => {
 function App() {
   const [extendSlow, setExtendSlow] = useState(false);
   const [showFast, setShowFast] = useState(true);
-  const [showDecel, setShowDecel] = useState(true);
+  const [showDecel, setShowDecel] = useState(false); // hypothetical — opt in
   const [useP80, setUseP80] = useState(false);
   // Hide models whose value for the ACTIVE view's metric is not a real
   // measurement: predicted diamonds in the TH view; imputed/estimated points
@@ -305,7 +316,7 @@ function App() {
   const [predBasis, setPredBasis] = useState("default"); // which fit converts indices to predicted horizons
   const [fitFast, setFitFast] = useState(false); // false = fixed 3.5-mo, true = fitted slope
   const [decayPct, setDecayPct] = useState(20);   // % growth-rate decay per horizon doubling
-  const [decayStartStr, setDecayStartStr] = useState("2026-06-01"); // when the slowdown begins
+  const [decayStartStr, setDecayStartStr] = useState(DECAY_START_DEFAULT); // when the slowdown begins
   const [tipState, setTipState] = useState({ model: null, cx: 0, cy: 0, opacity: 0 });
   const lastTip = useRef(null); // persists content during fadeout
   const fadeTimer = useRef(null);
@@ -428,7 +439,7 @@ function App() {
 
   const decayStartMs = useMemo(() => {
     const t = new Date(decayStartStr).getTime();
-    return isNaN(t) ? new Date(2026,5,1).getTime() : t;
+    return isNaN(t) ? new Date(DECAY_START_DEFAULT).getTime() : t;
   }, [decayStartStr]);
   const decayFrac = Math.min(Math.max(decayPct/100, 0), 0.95);
 
@@ -885,6 +896,9 @@ function App() {
     ? `${recFit.dMo.toFixed(1)}-month doubling (fitted ${horizonTag}, 2024+)`
     : "3.5-month doubling (2024+ trend)";
   const decStart = new Date(decayStartMs).toLocaleString("en-US",{month:"short",year:"numeric"});
+  // Toggle label tracks the chosen start year (same Date basis as decStart, so
+  // the two never disagree about which year a start date falls in).
+  const decYear = new Date(decayStartMs).getFullYear();
   const decelLabel = `Slowdown: −${decayPct}%/doubling from ${decStart}`;
   const scoreSlowLabel = scoreFit
     ? `Previous trend: +${scoreFit.slow.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (n=${scoreFit.slow.n})`
@@ -915,8 +929,7 @@ function App() {
           <span style={{color:COL.openai}}>OpenAI</span>{" / "}
           <span style={{color:COL.anthropic}}>Anthropic</span>{" / "}
           <span style={{color:COL.google}}>Google</span>{" / "}
-          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Z.ai)</span>{" / "}
-          <span style={{color:COL.moonshot}}>Moonshot</span>
+          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Z.ai, Moonshot)</span>
         </p>
 
         {/* Y-axis mode: measured time horizon vs capability-index scores */}
@@ -1031,7 +1044,7 @@ function App() {
               onClick={()=>setShowDecel(v=>!v)}>
               <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.decel,
                 background:showDecel?COL.decel:"transparent",transition:"background 0.15s"}}/>
-              <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>2026 slowdown</span>
+              <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>{decYear} slowdown</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
               onClick={()=>setPinScore(v=>!v)}>
@@ -1071,7 +1084,7 @@ function App() {
             onClick={()=>setShowDecel(v=>!v)}>
             <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.decel,
               background:showDecel?COL.decel:"transparent",transition:"background 0.15s"}}/>
-            <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>2026 slowdown</span>
+            <span style={{color:showDecel?"#ccc":"#777",transition:"color 0.15s"}}>{decYear} slowdown</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
             onClick={()=>setUseP80(v=>!v)}>
@@ -1104,7 +1117,7 @@ function App() {
               background:testedOnly?"#9ab7d3":"transparent",transition:"background 0.15s"}}/>
             <span style={{color:testedOnly?"#ccc":"#777",transition:"color 0.15s"}}>Show tested models only</span>
           </div>
-          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Open-weights",COL.deepseek],["Moonshot",COL.moonshot]].map(([lb,c])=>(
+          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Open-weights",COL.deepseek]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
             </div>

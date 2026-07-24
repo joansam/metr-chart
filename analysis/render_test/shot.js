@@ -38,7 +38,7 @@ const LOCAL = {
     const have = new Set([...document.querySelectorAll('text')].map(t => t.textContent));
     return ns.filter(n => !have.has(n));
   }, names);
-  const OPEN_MODELS = ['DeepSeek-R1', 'GLM-5.2'];
+  const OPEN_MODELS = ['DeepSeek-R1', 'GLM-5.2', 'Kimi K3'];
   // open-weights reference diamonds render in the TH view
   for (const n of await labelsPresent(OPEN_MODELS))
     failures.push(`TH view: missing ${n}`);
@@ -139,6 +139,27 @@ const LOCAL = {
   await page.screenshot({ path: 'chart_basis_eci.png' });
   await page.getByRole('button', { name: 'per-lab default' }).click();
   await page.waitForTimeout(300);
+
+  // Slowdown scenario is off by default, so opt in to keep the decel curve
+  // covered. Its toggle is labelled with the start year, which defaults to one
+  // year out, hence the regex rather than a fixed string.
+  await page.getByRole('button', { name: 'Time horizon' }).click();
+  await page.waitForTimeout(600);
+  const decelToggle = page.getByText(/^\d{4} slowdown$/).first();
+  await decelToggle.click();
+  await page.waitForTimeout(800);
+  // Assert on the drawn curve, not the legend: the legend entry renders
+  // unconditionally, while the decel <Line>'s data is null until it is enabled,
+  // leaving an empty path. COL.decel is the purple used only by that series.
+  const decelDrawn = () => page.evaluate(() =>
+    [...document.querySelectorAll('path')].some(p =>
+      (p.getAttribute('stroke') || '').toLowerCase() === '#c084fc' &&
+      (p.getAttribute('d') || '').length > 10));
+  if (!await decelDrawn()) failures.push('slowdown enabled: decel curve not drawn');
+  await page.screenshot({ path: 'chart_decel.png' });
+  await decelToggle.click(); // back to default (off)
+  await page.waitForTimeout(800);
+  if (await decelDrawn()) failures.push('slowdown off: decel curve still drawn');
 
   // tested-only toggle: TH view hides diamonds; ECI view refits to measured
   await page.getByText('Show tested models only').click();
