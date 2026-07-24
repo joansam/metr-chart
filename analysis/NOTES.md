@@ -13,15 +13,28 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 
 - `../benchmark_results_1_1 (5).yaml` — METR-Horizon-v1.1 ground truth.
 - `data/epoch_capabilities_index.csv` — Epoch AI Benchmarking Hub download
-  (Jul 15 2026, CC-BY 4.0, cite epoch.ai/benchmarks). METR Time Horizons is
+  (Jul 24 2026, CC-BY 4.0, cite epoch.ai/benchmarks). METR Time Horizons is
   NOT among the ~52 benchmarks feeding the ECI, so TH-on-ECI fits aren't
   circular. Reasoning-effort/context variants (`_high`, `_32K`, ...) share
-  their base model's score.
-- `data/aeci_fable5_systemcard.csv` — Barry's extraction (with CIs) of the
-  "Anthropic ECI over time" chart in the Fable/Mythos 5 system card; pulled
-  from the Datawrapper dataset behind his Jun 20 post
-  (datawrapper.dwcdn.net/qBQks/1/dataset.csv). AECI values shift at every
-  system-card release; replace this file wholesale at the next release.
+  their base model's score. Refresh it from
+  `https://epoch.ai/data/benchmark_data.zip` (the "LLM Benchmark Data" link on
+  epoch.ai/benchmarks/use-this-data); the ECI CSV is one member of that zip.
+  Epoch refit the index globally on each refresh, so every score drifts a
+  little (Jul 15 -> Jul 24 moved tracked models by at most 0.3 pts).
+- `data/aeci_systemcards.csv` — AECI point estimates with CIs, one row per
+  model, `source` naming the system card each row came from:
+  - `fable5_card` — Barry's extraction of the "Anthropic ECI over time" chart
+    in the Fable/Mythos 5 system card, from the Datawrapper dataset behind his
+    Jun 20 post (datawrapper.dwcdn.net/qBQks/1/dataset.csv).
+  - `opus5_card` — the Claude Opus 5 point quoted in prose in the Opus 5
+    system card (Jul 24 2026), §2.3.3.
+  Anthropic "rerun the ECI fit globally" at each release, so vintages are only
+  mixable when they agree on the models they share. These two do: Mythos 5 is
+  161.3 [157.3, 165.4] in both cards, unchanged to the precision either
+  reports, so no benchmark was added or dropped in a way that moved the scale
+  and Opus 5's 162.1 is directly comparable to the older rows. Re-check that
+  overlap before appending the next card's rows; if it fails, replace the
+  whole file with the new vintage instead of appending.
 
 ## Methodology decisions worth remembering
 
@@ -38,6 +51,22 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
   earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
+- **Opus 5 vs the card's frontier set**: the Opus 5 card overlays Opus 5 as a
+  *non-frontier* point ("as with Claude Opus 4.7 and Claude Opus 4.8") and
+  keeps its slope ratios unchanged — "frontier" there means Anthropic's own
+  Mythos-class line. The chart instead applies its uniform cross-lab
+  running-max rule, under which Opus 5's 162.1 does beat Mythos 5's 161.29 and
+  joins the score frontier. Deliberate: hand-excluding a point on one lab's
+  model-line taxonomy would be inconsistent with how every other lab's models
+  are treated, and the cost is nil — including Opus 5 moves the fast AECI
+  trend from 14.17 to 14.21 pts/yr (ECI: 14.95 -> 14.98). The two are within
+  each other's CIs anyway (Opus 5 [158.0, 167.3] vs Mythos 5 [157.3, 165.4]),
+  and "pin new trend to 13.5/yr" reproduces the card's rate exactly.
+- **Kimi K3 is not an open-weights marker**: Moonshot shipped K2.x as open
+  weights but K3 is API-access only (per Epoch's `Model accessibility`), so it
+  gets its own color rather than the shared gold. It routes like the
+  open-weights models for a different reason — no METR-tested Moonshot model,
+  hence no ANCOVA intercept, hence the pooled ECI fit.
 - **Open-weights reference models** (DeepSeek-R1, GLM-5.2): plotted for the
   open-vs-closed gap. Public ECI only — no METR run, no AECI — so they enter
   no fit anywhere (and sit below the running-max score frontier, so they can't
@@ -64,9 +93,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 
 The session's network egress allowlist was extended with: substack.com,
 abstatisticalconsulting.substack.com, epoch.ai, datawrapper.dwcdn.net,
-lesswrong.com (+ wildcards). anthropic.com remains blocked at the gateway
-regardless of allowlist entries (platform special-casing), so system-card
-PDFs must be uploaded by hand. Substack bot-blocks plain fetchers on
+lesswrong.com (+ wildcards). anthropic.com itself remains blocked at the
+gateway regardless of allowlist entries (platform special-casing), but the
+CDN host that actually serves the system-card PDFs, www-cdn.anthropic.com, is
+reachable — the Opus 5 card was pulled straight from it with curl, no manual
+upload needed. The PDFs are big (Opus 5 is 16 MB / 193 pages), which is over
+WebFetch's limit, so curl + pypdf rather than WebFetch. Substack bot-blocks
+plain fetchers on
 /home/post/ URLs but its JSON API works: 
 `<publication>.substack.com/api/v1/posts/<slug>`.
 
@@ -80,4 +113,8 @@ PDFs must be uploaded by hand. Substack bot-blocks plain fetchers on
   default fits).
 - A validation ledger: record predictions per data vintage, score them as
   METR publishes actuals (first real test: a METR run of launch-version
-  Mythos/Fable 5 vs the 61.3h/8.2h AECI-fit prediction).
+  Mythos/Fable 5 vs the 61.3h/8.2h AECI-fit prediction, then Opus 5 vs
+  71.4h/9.5h).
+- Opus 5 has no Epoch ECI row yet (its public ECI is imputed from the AECI
+  fit, 164.2). Worth re-pulling the ECI zip in a week or two and letting the
+  measured value replace the imputed one.

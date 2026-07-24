@@ -16,10 +16,13 @@ Data sources:
       Epoch AI's Benchmarking Hub (https://epoch.ai/benchmarks, CC-BY 4.0).
       METR Time Horizons is NOT among the benchmarks that feed the ECI, so
       fit 2 is not circular.
-    - AECI: analysis/data/aeci_fable5_systemcard.csv - Barry's extraction
-      from the Fable/Mythos 5 system card chart (Datawrapper dataset behind
-      his Jun 20 2026 post). Anthropic recalculate AECI values at each
-      release; this is the current vintage.
+    - AECI: analysis/data/aeci_systemcards.csv - Barry's extraction from the
+      Fable/Mythos 5 system card chart (Datawrapper dataset behind his Jun 20
+      2026 post), plus the Claude Opus 5 point quoted in the Opus 5 system
+      card (Jul 24 2026). Anthropic rerun the ECI fit globally at each
+      release, so values drift between snapshots; the two vintages are
+      mixable here because Mythos 5 is unchanged across them (161.3
+      [157.3, 165.4] in both). See the `source` column.
 
 Usage:
     python analysis/eci_conversions.py               # print fits + tables
@@ -48,7 +51,7 @@ from scipy import stats
 HERE = os.path.dirname(os.path.abspath(__file__))
 METR_YAML = os.path.join(HERE, "..", "benchmark_results_1_1 (5).yaml")
 ECI_CSV = os.path.join(HERE, "data", "epoch_capabilities_index.csv")
-AECI_CSV = os.path.join(HERE, "data", "aeci_fable5_systemcard.csv")
+AECI_CSV = os.path.join(HERE, "data", "aeci_systemcards.csv")
 
 # display name (must match the AECI csv) -> (metr_yaml_key, eci_model_version, lab)
 # None means the model lacks that value.
@@ -73,6 +76,9 @@ MODELS = {
     # cross-variant pair never enters the ECI->AECI fit.
     "Claude Mythos 5":         (None,                                 None,                         "anthropic"),
     "Claude Fable 5":          (None,                                 "claude-fable-5",             "anthropic"),
+    # Opus 5 (system card Jul 24 2026): AECI only so far — no METR run, and
+    # Epoch's Jul 24 ECI snapshot doesn't carry it yet.
+    "Claude Opus 5":           (None,                                 None,                         "anthropic"),
     "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
     "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
     "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
@@ -92,6 +98,10 @@ MODELS = {
     # METR data either, so predictions fall back to the pooled ECI fit.
     "DeepSeek-R1":             (None,                                 "DeepSeek-R1",                "deepseek"),
     "GLM-5.2":                 (None,                                 "glm-5.2",                    "zai"),
+    # Kimi K3 is Moonshot's first API-access-only frontier model (K2.x were all
+    # open weights), so it is NOT an open-weights reference point. Same routing
+    # as those, though: no METR-tested Moonshot model, hence the pooled ECI fit.
+    "Kimi K3":                 (None,                                 "kimi-k3",                    "moonshot"),
     # Chart models with a METR result but no published index: their ECI/AECI
     # are estimated from the p50 horizon (inverted ECI fit) for display only
     # and never enter any fit.
@@ -124,10 +134,13 @@ PREDICTED_DATES = {
     "Claude Mythos Preview": "2026-04-07",
     "Claude Mythos 5":       "2026-06-09",
     "Claude Fable 5":        "2026-06-09",
+    # Opus 5 has no Epoch row yet; its system card is dated Jul 24 2026.
+    "Claude Opus 5":         "2026-07-24",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
     "DeepSeek-R1":           "2025-01-20",
     "GLM-5.2":               "2026-06-16",
+    "Kimi K3":               "2026-07-16",
 }
 HTML = os.path.join(HERE, "..", "index.html")
 

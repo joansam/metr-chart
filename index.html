@@ -30,6 +30,8 @@ const COL = {
   anthropic: "#d97757", openai: "#18a683", google: "#4285F4",
   // open-weights reference labs share one color (open-vs-closed gap markers)
   deepseek: "#d4b24e", zai: "#d4b24e",
+  // Moonshot's K3 is API-access only, so it is not an open-weights marker
+  moonshot: "#c96bb0",
   slow: "#7eb8da", fast: "#f06060", decel: "#c084fc",
 };
 const FONT = "Georgia, 'Times New Roman', serif";
@@ -74,25 +76,27 @@ const M = M_RAW.map(m => ({ ...m, p: m.p/60, lo: m.lo/60, hi: m.hi/60, p80: m.p8
 // Conversion-fit constants (same fits as this script's report):
 // ln(TH_minutes) = a + b*score for the TH fits; AECI = a + b*ECI for eciAeci.
 const FITS = {
-  eciP50:   { a: -18.5233, b: 0.158683 },
-  eciP80:   { a: -19.8481, b: 0.156160 },
+  eciP50:   { a: -18.4723, b: 0.158301 },
+  eciP80:   { a: -19.7965, b: 0.155773 },
   aeciP50:  { a: -22.2671, b: 0.188957 },
   aeciP80:  { a: -23.2818, b: 0.182767 },
-  eciAeci:  { a: 4.1639, b: 0.962824 },
-  eciP50Lab: { b: 0.163414, anthropic: -18.9260, google: -19.4902, openai: -19.3588 },
-  eciP80Lab: { b: 0.156548, anthropic: -19.7825, google: -19.8701, openai: -20.0072 },
+  eciAeci:  { a: 4.6953, b: 0.958878 },
+  eciP50Lab: { b: 0.163053, anthropic: -18.8776, google: -19.4445, openai: -19.3111 },
+  eciP80Lab: { b: 0.156185, anthropic: -19.7335, google: -19.8234, openai: -19.9589 },
 };
 const PRED_RAW = [
-  { n: "DeepSeek-R1",     d: "2025-01-20", basis: "ECI 139.67 (pooled ECI fit; no deepseek METR data)", p: 38.092067, p80: 7.118621, l: "deepseek" },
+  { n: "DeepSeek-R1",     d: "2025-01-20", basis: "ECI 139.68 (pooled ECI fit; no deepseek METR data)", p: 38.062258, p80: 7.113374, l: "deepseek" },
   { n: "Sonnet 4.5",      d: "2025-09-29", basis: "AECI 145.9", p: 200.680311, p80: 29.484408, l: "anthropic" },
   { n: "Mythos Preview",  d: "2026-04-07", basis: "AECI 158.91", p: 2345.006320, p80: 317.875501, l: "anthropic" },
   { n: "Opus 4.7",        d: "2026-04-16", basis: "AECI 155.0", p: 1120.154173, p80: 155.561471, l: "anthropic" },
-  { n: "GPT-5.5",         d: "2026-04-23", basis: "ECI 158.33 (openai lab-adjusted ECI fit)", p: 674.870843, p80: 118.997888, l: "openai" },
+  { n: "GPT-5.5",         d: "2026-04-23", basis: "ECI 158.52 (openai lab-adjusted ECI fit)", p: 689.622986, p80: 121.452287, l: "openai" },
   { n: "Opus 4.8",        d: "2026-05-28", basis: "AECI 156.4", p: 1459.371836, p80: 200.921587, l: "anthropic" },
-  { n: "Fable 5",         d: "2026-06-09", basis: "ECI 160.44 (implied AECI 158.6)", p: 2228.132768, p80: 302.539056, l: "anthropic" },
+  { n: "Fable 5",         d: "2026-06-09", basis: "ECI 160.75 (implied AECI 158.8)", p: 2311.968554, p80: 313.542795, l: "anthropic" },
   { n: "Mythos 5",        d: "2026-06-09", basis: "AECI 161.29", p: 3676.663539, p80: 491.098723, l: "anthropic" },
-  { n: "GLM-5.2",         d: "2026-06-16", basis: "ECI 151.6 (pooled ECI fit; no zai METR data)", p: 252.925673, p80: 45.864832, l: "zai" },
-  { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 161.77 (openai lab-adjusted ECI fit)", p: 1184.012443, p80: 203.900420, l: "openai" },
+  { n: "GLM-5.2",         d: "2026-06-16", basis: "ECI 151.41 (pooled ECI fit; no zai METR data)", p: 243.738818, p80: 44.220948, l: "zai" },
+  { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 162.06 (openai lab-adjusted ECI fit)", p: 1228.260719, p80: 211.117607, l: "openai" },
+  { n: "Kimi K3",         d: "2026-07-16", basis: "ECI 155.62 (pooled ECI fit; no moonshot METR data)", p: 474.634783, p80: 85.200273, l: "moonshot" },
+  { n: "Opus 5",          d: "2026-07-24", basis: "AECI 162.1", p: 4284.744152, p80: 569.458788, l: "anthropic" },
 ];
 // Alternative conversion routes for the predicted horizons, computed from the
 // generated FITS constants. "default" uses the PRED_RAW values (AECI fit for
@@ -115,40 +119,42 @@ const PRED_BASES = {
 // ECI<->AECI line (eciImp/aeciImp mark imputed values). GENERATED alongside
 // PRED_RAW by --emit-js; verify with --check-html.
 const IDX_RAW = [
-  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.74, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
-  { n: "GPT-4",               d: "2023-03-14", eci: 125.93, aeci: 125.41, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
-  { n: "GPT-4 1106",          d: "2023-11-06", eci: 127.02, aeci: 126.46, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
-  { n: "3 Opus",              d: "2024-03-04", eci: 126.92, aeci: 126.0, aeciLo: 123.9, aeciHi: 126.8, p50: 3.952262, p80: 0.638973, l: "anthropic" },
-  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.01, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
-  { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.2, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
+  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.8, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
+  { n: "GPT-4",               d: "2023-03-14", eci: 125.92, aeci: 125.44, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
+  { n: "GPT-4 1106",          d: "2023-11-06", eci: 127.0, aeci: 126.47, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
+  { n: "3 Opus",              d: "2024-03-04", eci: 126.91, aeci: 126.0, aeciLo: 123.9, aeciHi: 126.8, p50: 3.952262, p80: 0.638973, l: "anthropic" },
+  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.59, aeci: 127.04, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
+  { n: "GPT-4o",              d: "2024-05-13", eci: 128.83, aeci: 128.23, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
   { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, aeciLo: 130.0, aeciHi: 130.0, p50: 11.395377, p80: 1.671757, l: "anthropic" },
-  { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.93, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
+  { n: "o1-preview",          d: "2024-09-12", eci: 135.81, aeci: 134.92, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
   { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.28, aeci: 133.4, aeciLo: 132.3, aeciHi: 135.3, p50: 20.522872, p80: 2.595677, l: "anthropic" },
-  { n: "o1",                  d: "2024-12-05", eci: 142.69, aeci: 141.55, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
-  { n: "DeepSeek-R1",         d: "2025-01-20", eci: 139.67, aeci: 138.64, aeciImp: true, l: "deepseek" },
+  { n: "o1",                  d: "2024-12-05", eci: 142.71, aeci: 141.54, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
+  { n: "DeepSeek-R1",         d: "2025-01-20", eci: 139.68, aeci: 138.63, aeciImp: true, l: "deepseek" },
   { n: "Claude 3.7",          d: "2025-02-24", eci: 141.7, aeci: 139.6, aeciLo: 138.3, aeciHi: 141.2, p50: 60.388937, p80: 12.09179, l: "anthropic" },
-  { n: "o3",                  d: "2025-04-16", eci: 147.05, aeci: 145.75, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
-  { n: "Opus 4",              d: "2025-05-22", eci: 142.89, aeci: 142.1, aeciLo: 140.4, aeciHi: 143.8, p50: 100.366123, p80: 20.429752, l: "anthropic" },
-  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.01, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
-  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.59, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
-  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.75, aeci: 145.9, aeciLo: 144.3, aeciHi: 148.2, l: "anthropic" },
-  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.24, aeci: 151.71, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
-  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 151.57, aeci: 150.1, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
-  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.53, aeci: 148.3, aeciLo: 146.7, aeciHi: 150.7, p50: 292.994594, p80: 49.430584, l: "anthropic" },
-  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.7, aeci: 152.15, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
-  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.49, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
-  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 152.6, aeciLo: 150.4, aeciHi: 155.3, p50: 718.80683, p80: 69.874587, l: "anthropic" },
-  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 153.25, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
-  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 156.28, aeci: 154.63, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
-  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.03, aeci: 154.39, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
-  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.72, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
-  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.01, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
-  { n: "GPT-5.5",             d: "2026-04-23", eci: 158.33, aeci: 156.61, aeciImp: true, l: "openai" },
-  { n: "Opus 4.8",            d: "2026-05-28", eci: 157.85, aeci: 156.4, aeciLo: 153.2, aeciHi: 159.4, l: "anthropic" },
-  { n: "Fable 5",             d: "2026-06-09", eci: 160.44, aeci: 158.64, aeciImp: true, l: "anthropic" },
-  { n: "Mythos 5",            d: "2026-06-09", eci: 163.19, aeci: 161.29, eciImp: true, aeciLo: 157.32, aeciHi: 165.39, l: "anthropic" },
-  { n: "GLM-5.2",             d: "2026-06-16", eci: 151.6, aeci: 150.13, aeciImp: true, l: "zai" },
-  { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 161.77, aeci: 159.92, aeciImp: true, l: "openai" },
+  { n: "o3",                  d: "2025-04-16", eci: 147.07, aeci: 145.72, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
+  { n: "Opus 4",              d: "2025-05-22", eci: 142.93, aeci: 142.1, aeciLo: 140.4, aeciHi: 143.8, p50: 100.366123, p80: 20.429752, l: "anthropic" },
+  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 142.98, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
+  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.53, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
+  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.76, aeci: 145.9, aeciLo: 144.3, aeciHi: 148.2, l: "anthropic" },
+  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.28, aeci: 151.67, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
+  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 151.62, aeci: 150.08, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
+  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.54, aeci: 148.3, aeciLo: 146.7, aeciHi: 150.7, p50: 292.994594, p80: 49.430584, l: "anthropic" },
+  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.72, aeci: 152.09, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
+  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.57, aeci: 153.87, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
+  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.38, aeci: 152.6, aeciLo: 150.4, aeciHi: 155.3, p50: 718.80683, p80: 69.874587, l: "anthropic" },
+  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.92, aeci: 153.24, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
+  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 156.36, aeci: 154.63, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
+  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.12, aeci: 154.4, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
+  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.83, aeci: 158.91, eciImp: true, aeciLo: 156.19, aeciHi: 162.84, l: "anthropic" },
+  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.1, aeci: 155.0, aeciLo: 152.3, aeciHi: 157.9, l: "anthropic" },
+  { n: "GPT-5.5",             d: "2026-04-23", eci: 158.52, aeci: 156.7, aeciImp: true, l: "openai" },
+  { n: "Opus 4.8",            d: "2026-05-28", eci: 158.03, aeci: 156.4, aeciLo: 153.2, aeciHi: 159.4, l: "anthropic" },
+  { n: "Fable 5",             d: "2026-06-09", eci: 160.75, aeci: 158.83, aeciImp: true, l: "anthropic" },
+  { n: "Mythos 5",            d: "2026-06-09", eci: 163.31, aeci: 161.29, eciImp: true, aeciLo: 157.32, aeciHi: 165.39, l: "anthropic" },
+  { n: "GLM-5.2",             d: "2026-06-16", eci: 151.41, aeci: 149.88, aeciImp: true, l: "zai" },
+  { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 162.06, aeci: 160.09, aeciImp: true, l: "openai" },
+  { n: "Kimi K3",             d: "2026-07-16", eci: 155.62, aeci: 153.92, aeciImp: true, l: "moonshot" },
+  { n: "Opus 5",              d: "2026-07-24", eci: 164.16, aeci: 162.1, eciImp: true, aeciLo: 158.0, aeciHi: 167.3, l: "anthropic" },
 ];
 // ── One record per model for tooltips, merging M_RAW (measured horizons),
 // PRED_RAW (predicted horizons) and IDX_RAW (indices). Every model gets TH,
@@ -197,6 +203,10 @@ const LBL = {
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
   "DeepSeek-R1": { dx: 8, dy: 14 },
   "GLM-5.2": { dx: 8, dy: 14 },
+  "Kimi K3": { dx: 10, dy: 14 },
+  // Opus 5 sits ~45 days right of and barely above Mythos 5 in every view, so
+  // its label needs extra lift to clear the "Mythos 5" one.
+  "Opus 5": { dx: 8, dy: -22 },
 };
 // Permanent labels suppressed in the (crowded) time-horizon view only;
 // score modes still show them.
@@ -905,7 +915,8 @@ function App() {
           <span style={{color:COL.openai}}>OpenAI</span>{" / "}
           <span style={{color:COL.anthropic}}>Anthropic</span>{" / "}
           <span style={{color:COL.google}}>Google</span>{" / "}
-          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Z.ai)</span>
+          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Z.ai)</span>{" / "}
+          <span style={{color:COL.moonshot}}>Moonshot</span>
         </p>
 
         {/* Y-axis mode: measured time horizon vs capability-index scores */}
@@ -1093,7 +1104,7 @@ function App() {
               background:testedOnly?"#9ab7d3":"transparent",transition:"background 0.15s"}}/>
             <span style={{color:testedOnly?"#ccc":"#777",transition:"color 0.15s"}}>Show tested models only</span>
           </div>
-          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Open-weights",COL.deepseek]].map(([lb,c])=>(
+          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Open-weights",COL.deepseek],["Moonshot",COL.moonshot]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
             </div>
