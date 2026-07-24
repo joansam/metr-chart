@@ -201,13 +201,13 @@ const LBL = {
   // to the right). Opus 5's dot is only ~5px away in every view, so the nudge
   // left and the extra lift are what keep the two labels — and "Mythos
   // Preview" just below-left — from colliding.
-  "Mythos 5": { dx: -6, dy: -13, a: "middle" },
+  "Mythos 5": { dx: -9, dy: -13, a: "middle" },
   "Fable 5":  { dx: 8, dy: 12 },
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
   "DeepSeek-R1": { dx: 8, dy: 14 },
   "GLM-5.2": { dx: 8, dy: 14 },
-  "Kimi K3": { dx: 10, dy: 14 },
+  "Kimi K3": { dx: 10, dy: 8 },
   "Opus 5": { dx: 8, dy: -11 },
 };
 // Permanent labels suppressed in the (crowded) time-horizon view only;
@@ -265,6 +265,9 @@ const CS = new Date(2022,0,1).getTime();
 const CE = new Date(2029,0,1).getTime();
 const TODAY = Date.now();
 const YLO = 0.0001, YHI = 1000;
+const clamp = (lo, v, hi) => Math.min(Math.max(v, lo), hi);
+// Prose stays at a readable measure even when the chart shell grows past it.
+const PROSE_W = 900;
 
 // Default start of the hypothetical slowdown: one year out from whenever the
 // page is opened, so the scenario always begins in the future instead of
@@ -326,13 +329,14 @@ function App() {
   const chartRef = useRef(null);
   if (tipState.model) lastTip.current = tipState;
 
-  // ── Mobile detection ──
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
+  // ── Viewport tracking: drives the mobile breakpoint and the responsive sizing ──
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+  const isMobile = vp.w < 600;
 
   const models = useMemo(() => M.map(m => {
     const ts = new Date(m.d).getTime();
@@ -532,7 +536,21 @@ function App() {
   const isZoomed = zoom.x0 !== CS || zoom.x1 !== CE || zoom.ly0 !== null || zoom.ly1 !== null;
   const CHART_MARGIN = isMobile ? { top: 10, right: 16, left: 2, bottom: 30 } : { top: 20, right: 90, left: 15, bottom: 40 };
   const YAXIS_W = isMobile ? 44 : 62;
-  const CHART_HEIGHT = isMobile ? 400 : 540;
+  // Responsive sizing. Width is the big win on a desktop monitor: the shell used
+  // to sit at a fixed 900px, leaving ~1000px unused at 1080p. Height only grows
+  // where there is genuine room — the non-chart chrome is ~560px tall, so a
+  // 1080p viewport is already full at the 540px baseline and keeps it, while
+  // 1440p has the headroom to go taller. Caps stop an ultrawide from stretching
+  // the plot into uselessness.
+  const CHART_HEIGHT = isMobile ? 400 : clamp(540, vp.h - 600, 900);
+  // Width is also capped by height: past roughly 2.6:1 the plot letterboxes and
+  // visually flattens the exponential, which is the one thing this chart exists
+  // to show. So a short viewport widens less, and only a tall one earns the
+  // full 1600. NON_PLOT_W is the chrome the margins and y-axis take off the top.
+  const NON_PLOT_W = CHART_MARGIN.left + YAXIS_W + CHART_MARGIN.right;
+  const PLOT_H = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
+  const SHELL_W = isMobile ? "100%"
+    : clamp(900, Math.min(vp.w - 48, PLOT_H * 2.6 + NON_PLOT_W), 1600);
   const ZOOM_FACTOR = 0.15;
 
   const onWheel = useCallback((e) => {
@@ -711,7 +729,7 @@ function App() {
     if (!container) return;
     const rect = container.getBoundingClientRect();
     const plotW = rect.width - CHART_MARGIN.left - YAXIS_W - CHART_MARGIN.right;
-    const plotH = 540 - CHART_MARGIN.top - CHART_MARGIN.bottom;
+    const plotH = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
     const dx = e.clientX - panStart.current.mx;
     const dy = e.clientY - panStart.current.my;
     const prev = panStart.current.zoom;
@@ -730,7 +748,7 @@ function App() {
     if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = nly0 + lySpan; }
     if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = nly1 - lySpan; }
     setZoom({ x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 });
-  }, [yUnitBot, yUnitTop]);
+  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yUnitBot, yUnitTop]);
 
   const onPanEnd = useCallback(() => { isPanning.current = false; }, []);
 
@@ -928,7 +946,7 @@ function App() {
 
   return (
     <div style={{background:"#12121f",minHeight:"100vh",padding:isMobile?"16px 6px":"32px 24px"}}>
-      <div style={{maxWidth:900,margin:"0 auto"}}>
+      <div style={{maxWidth:SHELL_W,margin:"0 auto"}}>
         <h1 style={{fontFamily:FONT_D,fontSize:26,fontWeight:700,color:"#eee",marginBottom:4,letterSpacing:"-0.02em"}}>
           METR Time Horizon Trends
         </h1>
@@ -938,7 +956,7 @@ function App() {
             onMouseOver={e=>e.target.style.textDecoration="underline"} onMouseOut={e=>e.target.style.textDecoration="none"}
           >METR Time Horizons: Now 10x/Year</a>
         </p>
-        <p style={{fontSize:14,color:"#888",marginBottom:20,lineHeight:1.5}}>
+        <p style={{fontSize:14,color:"#888",marginBottom:20,lineHeight:1.5,maxWidth:PROSE_W}}>
           SOTA model performance (dots with 95% CI) against exponential trend fits.
           Dashed diamonds are predicted horizons for models METR hasn't run, converted
           from ECI/AECI capability indices (see <code style={{fontSize:12}}>analysis/</code>).{" "}
@@ -1165,7 +1183,7 @@ function App() {
         </div>}
 
         {isScore
-          ? <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
+          ? <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5,maxWidth:PROSE_W}}>
               Linear Y-axis: {yMode==="eci" ? "Epoch Capabilities Index (public ECI)" :
               "Anthropic internal ECI (AECI, extracted from system-card charts)"}. Filled dots are
               measured scores; dashed diamonds are imputed through the fitted ECI↔AECI line
@@ -1173,7 +1191,7 @@ function App() {
               cross-lab running-max frontier, split at the same mid-2024 break as the time-horizon
               view. Data: Epoch AI Benchmarking Hub / abstatisticalconsulting.substack.com.
             </p>
-          : <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5}}>
+          : <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5,maxWidth:PROSE_W}}>
           Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-mid-2024 SOTA;
           {fitFast
             ? ` fast trend is a least-squares fit to mid-2024+ ${horizonTag} points (${recFit.dMo.toFixed(1)}-mo doubling).`
@@ -1181,7 +1199,7 @@ function App() {
           {" "}Data: METR Horizon v1.1.
         </p>}
 
-        <div style={{marginTop:28,padding:"18px 22px",background:"#1a1a2e",borderRadius:8,borderLeft:"3px solid #f0c050"}}>
+        <div style={{marginTop:28,padding:"18px 22px",background:"#1a1a2e",borderRadius:8,borderLeft:"3px solid #f0c050",maxWidth:PROSE_W}}>
           <h3 style={{fontFamily:FONT_D,fontSize:15,fontWeight:700,color:"#eee",marginBottom:8}}>
             Progress has accelerated with reasoning models
           </h3>

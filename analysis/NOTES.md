@@ -99,6 +99,14 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   7.2 points of shortfall by 2029 against 5.9 if the TH curve's shortfall were
   imported directly. Both are defensible; the gap is a statement about the
   AECI-vs-TH baseline disagreement, not about the slowdown model.
+- **Responsive sizing**: the shell grows into the viewport (`SHELL_W`) instead
+  of the old fixed 900px, and the chart grows taller (`CHART_HEIGHT`) where
+  there is vertical room. Two constraints are deliberate: height only exceeds
+  the 540px baseline once the viewport clears ~1140px, because the non-chart
+  chrome is ~560px tall and a 1080p screen is already full; and width is capped
+  by height at ~2.6:1, because past that the plot letterboxes and visually
+  flattens the exponential the chart exists to show. Prose blocks keep a
+  separate `PROSE_W` so line length stays readable when the chart goes wide.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in
