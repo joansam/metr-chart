@@ -100,13 +100,16 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   imported directly. Both are defensible; the gap is a statement about the
   AECI-vs-TH baseline disagreement, not about the slowdown model.
 - **Responsive sizing**: the shell grows into the viewport (`SHELL_W`) instead
-  of the old fixed 900px, and the chart grows taller (`CHART_HEIGHT`) where
-  there is vertical room. Two constraints are deliberate: height only exceeds
-  the 540px baseline once the viewport clears ~1140px, because the non-chart
-  chrome is ~560px tall and a 1080p screen is already full; and width is capped
-  by height at ~2.6:1, because past that the plot letterboxes and visually
-  flattens the exponential the chart exists to show. Prose blocks keep a
-  separate `PROSE_W` so line length stays readable when the chart goes wide.
+  of the old fixed 900px, and `CHART_HEIGHT` is 5/8 of viewport height (floor
+  540, ceiling 950). Height is deliberately NOT "whatever is left after the
+  chrome" — that fits 1080p scroll-free but leaves the plot squat, so the page
+  now scrolls ~130px at 1080p in exchange for a properly proportioned chart.
+  Width is then capped by height at 2:1, which is what stops the shell running
+  to its 1600 ceiling and cancelling out the height; past that ratio the plot
+  letterboxes and visually flattens the exponential the chart exists to show.
+  Resulting plot aspect is ~2.1:1 at 1080p and ~1.8:1 at 1440p. Prose blocks
+  keep a separate `PROSE_W` so line length stays readable when the chart is
+  wider than text should be.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in

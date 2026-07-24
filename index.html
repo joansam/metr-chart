@@ -536,21 +536,20 @@ function App() {
   const isZoomed = zoom.x0 !== CS || zoom.x1 !== CE || zoom.ly0 !== null || zoom.ly1 !== null;
   const CHART_MARGIN = isMobile ? { top: 10, right: 16, left: 2, bottom: 30 } : { top: 20, right: 90, left: 15, bottom: 40 };
   const YAXIS_W = isMobile ? 44 : 62;
-  // Responsive sizing. Width is the big win on a desktop monitor: the shell used
-  // to sit at a fixed 900px, leaving ~1000px unused at 1080p. Height only grows
-  // where there is genuine room — the non-chart chrome is ~560px tall, so a
-  // 1080p viewport is already full at the 540px baseline and keeps it, while
-  // 1440p has the headroom to go taller. Caps stop an ultrawide from stretching
-  // the plot into uselessness.
-  const CHART_HEIGHT = isMobile ? 400 : clamp(540, vp.h - 600, 900);
-  // Width is also capped by height: past roughly 2.6:1 the plot letterboxes and
-  // visually flattens the exponential, which is the one thing this chart exists
-  // to show. So a short viewport widens less, and only a tall one earns the
-  // full 1600. NON_PLOT_W is the chrome the margins and y-axis take off the top.
+  // Responsive sizing. Height is a fixed share of the viewport (5/8) rather than
+  // whatever is left after the ~560px of non-chart chrome: fitting the chrome
+  // exactly kept 1080p scroll-free but left the plot squat. This costs ~130px of
+  // scroll at 1080p and ~50px at 1440p, which is the trade for a plot that isn't
+  // letterboxed.
+  const CHART_HEIGHT = isMobile ? 400 : clamp(540, Math.round(vp.h * 0.625), 950);
+  // Width is then capped by height at 2:1, so the shell can't balloon to the
+  // 1600 ceiling and undo the height increase — past that ratio the plot
+  // flattens the exponential this chart exists to show. NON_PLOT_W is what the
+  // margins and y-axis take off the top before any of it reaches the plot.
   const NON_PLOT_W = CHART_MARGIN.left + YAXIS_W + CHART_MARGIN.right;
   const PLOT_H = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
   const SHELL_W = isMobile ? "100%"
-    : clamp(900, Math.min(vp.w - 48, PLOT_H * 2.6 + NON_PLOT_W), 1600);
+    : clamp(900, Math.min(vp.w - 48, PLOT_H * 2.0 + NON_PLOT_W), 1600);
   const ZOOM_FACTOR = 0.15;
 
   const onWheel = useCallback((e) => {
