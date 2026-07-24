@@ -82,6 +82,23 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   opened (`DECAY_START_DEFAULT`) rather than a fixed date that would silently
   age into the past. The toggle label and legend both derive their year from
   that date, so nothing has to be hand-edited as time passes.
+- **The slowdown does apply to ECI/AECI, and always did.** `scoreDecel` decays
+  the score growth rate by the same fraction per *TH-doubling-equivalent* of
+  score gained (K = ln2 / TH-fit slope), which is algebraically the same
+  scenario as the TH-space decay: with ln(TH) = a + b·score, the substitution
+  (y−y0)/ln2 = (s−s0)/K makes the two laws identical. It only looked absent
+  because the score y-axis was fitted to the datapoints alone, so both trend
+  lines left the top of the frame right where the decay begins. `scoreDomain`
+  now grows to frame the curves while the scenario is displayed.
+  One residual inconsistency worth knowing: the two views fit their baselines
+  independently, so they don't describe quite the same world. The ECI trend
+  (15.0 pts/yr) implies a 3.51-month TH doubling, matching the TH view's fixed
+  3.5 months almost exactly — there, the two slowdowns agree to within 0.1
+  points at 2029. The AECI trend (14.2 pts/yr) implies 3.10 months, i.e.
+  faster horizon growth than the TH view assumes, so it accrues more decay:
+  7.2 points of shortfall by 2029 against 5.9 if the TH curve's shortfall were
+  imported directly. Both are defensible; the gap is a statement about the
+  AECI-vs-TH baseline disagreement, not about the slowdown model.
 - **Dates**: Mythos Preview (Early) plots at 2026-02-24 (system-card
   internal-availability date), overriding the YAML's 2026-04-07; the
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in

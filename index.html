@@ -197,16 +197,18 @@ const LBL = {
   "Opus 4.6":  { dx: -8, dy: -12, a: "end" },
   "GPT-5.3 Codex": { dx: 8, dy: 12 },
   "Mythos Preview (Early)": { dx: -8, dy: -12, a: "end" },
-  "Mythos 5": { dx: 8, dy: -8 },
+  // Mythos 5 sits above its dot rather than beside it (frees the crowded space
+  // to the right). Opus 5's dot is only ~5px away in every view, so the nudge
+  // left and the extra lift are what keep the two labels — and "Mythos
+  // Preview" just below-left — from colliding.
+  "Mythos 5": { dx: -6, dy: -13, a: "middle" },
   "Fable 5":  { dx: 8, dy: 12 },
   "Mythos Preview": { dx: -8, dy: -8, a: "end" },
   "GPT-5.6 Sol": { dx: 8, dy: 14 },
   "DeepSeek-R1": { dx: 8, dy: 14 },
   "GLM-5.2": { dx: 8, dy: 14 },
   "Kimi K3": { dx: 10, dy: 14 },
-  // Opus 5 sits ~45 days right of and barely above Mythos 5 in every view, so
-  // its label needs extra lift to clear the "Mythos 5" one.
-  "Opus 5": { dx: 8, dy: -22 },
+  "Opus 5": { dx: 8, dy: -11 },
 };
 // Permanent labels suppressed in the (crowded) time-horizon view only;
 // score modes still show them.
@@ -402,19 +404,6 @@ function App() {
              fast: pinScore ? pin(fastPts, 13.5) : lin(fastPts) };
   }, [idxModels, isIdxFrontier, isScore, pinScore]);
 
-  const scoreDomain = useMemo(() => {
-    if (!isScore) return null;
-    let lo = Infinity, hi = -Infinity;
-    for (const m of idxModels) { if (m.sc < lo) lo = m.sc; if (m.sc > hi) hi = m.sc; }
-    return [Math.floor((lo - 3) / 5) * 5, Math.ceil((hi + 3) / 5) * 5];
-  }, [idxModels, isScore]);
-  const scoreTicks = useMemo(() => {
-    if (!scoreDomain) return [];
-    const t = [];
-    for (let v = scoreDomain[0]; v <= scoreDomain[1]; v += 5) t.push(v);
-    return t;
-  }, [scoreDomain]);
-
   // ── SOTA frontier for the active horizon: a model is SOTA if its horizon exceeds
   // every earlier-released model. p50 and p80 yield different frontiers, so this set
   // (and therefore both the fits and the filled/hollow dots) tracks the current mode. ──
@@ -490,6 +479,33 @@ function App() {
     });
     return d;
   }, [scoreFit, scoreDecel, extendSlow, showFast, showDecel]);
+
+  // Score y-range: normally just the models, letting the trend lines run off the
+  // top as they always have — scores are linear, so fitting the 2029 end of a
+  // straight trend would squash every datapoint into the bottom third for no
+  // gain. The exception is the slowdown scenario: its whole point is the gap
+  // that opens against the unslowed trend, and that gap sits well above the
+  // data, so while it is displayed the ceiling grows to frame both curves.
+  // (The TH view's yhiDyn fits trends unconditionally; it can afford to,
+  // being log-scaled.)
+  const scoreDomain = useMemo(() => {
+    if (!isScore) return null;
+    let lo = Infinity, hi = -Infinity;
+    for (const m of idxModels) { if (m.sc < lo) lo = m.sc; if (m.sc > hi) hi = m.sc; }
+    if (showDecel)
+      for (const d of scoreTrendData)
+        for (const k of ["scFast","scDecel"])
+          if (d[k] != null && d[k] > hi) hi = d[k];
+    return [Math.floor((lo - 3) / 5) * 5, Math.ceil((hi + 3) / 5) * 5];
+  }, [idxModels, isScore, scoreTrendData, showDecel]);
+  // Keep the tick count sane as the range grows with the extended trends.
+  const scoreTicks = useMemo(() => {
+    if (!scoreDomain) return [];
+    const step = (scoreDomain[1] - scoreDomain[0]) > 60 ? 10 : 5;
+    const t = [];
+    for (let v = scoreDomain[0]; v <= scoreDomain[1]; v += step) t.push(v);
+    return t;
+  }, [scoreDomain]);
 
   // Auto-fit the zoomed-out y-ceiling to the topmost visible trend line (and any
   // model CI that reaches higher), rounded up to a labelled tick. Reacts to the
