@@ -301,7 +301,7 @@ function decelDoublingMonths(fastFit, t, startMs, decayFrac) {
 }
 
 const CS = new Date(2022,0,1).getTime();
-const CE = new Date(2029,0,1).getTime();
+const CE = new Date(2030,0,1).getTime();
 const TODAY = Date.now();
 // Y floor sits on the lowest tick (0.1 min) rather than a decade below it —
 // that decade was empty, since the lowest on-chart CI bound is GPT-3.5
@@ -342,14 +342,25 @@ const YTICK_LABELS = {
 const niceCeil = v => YTICKS.find(t => t >= v * 1.04) ?? v * 1.1;
 const fmtYTick = h => YTICK_LABELS[h] || `${h}h`;
 
-const fmtH = h => {
-  if (h<1/60) return `${(h*60).toFixed(2)} min`;
-  if (h<1) return `${(h*60).toFixed(1)} min`;
-  if (h<8) return `${h.toFixed(1)} hours`;
-  if (h<40) return `${(h/8).toFixed(1)} work days`;
-  if (h<160) return `${(h/40).toFixed(1)} work weeks`;
-  return `${(h/160).toFixed(1)} months`;
+// Days/weeks/months are the 8h/40h/160h units the right-hand axis labels use.
+// Drops a trailing ".0" and singularises, so exactly one day reads "1 day".
+const unit = (v, u, dp=1) => {
+  const s = v.toFixed(dp);
+  return `${s.replace(/\.0+$/, "")} ${s === (1).toFixed(dp) ? u : u + "s"}`;
 };
+const fmtH = h => {
+  if (h<1/60) return `${(h*60).toFixed(2).replace(/\.?0+$/, "")} min`;
+  if (h<1) return `${(h*60).toFixed(1).replace(/\.0$/, "")} min`;
+  if (h<8) return unit(h, "hour");
+  if (h<40) return unit(h/8, "day");
+  if (h<160) return unit(h/40, "week");
+  return unit(h/160, "month");
+};
+// The active horizon also gets its raw hours, since days/weeks/months are
+// 8-hour units and the conversion isn't obvious. Skipped below 8h, where the
+// natural unit already IS hours (or minutes) and the gloss would just repeat.
+const fmtHLong = h => h < 8 ? fmtH(h)
+  : `${fmtH(h)} (${h < 10 ? unit(h, "hour") : unit(h, "hour", 0)})`;
 
 function App() {
   const [extendSlow, setExtendSlow] = useState(false);
@@ -573,12 +584,19 @@ function App() {
   // model CI that reaches higher), rounded up to a labelled tick. Reacts to the
   // horizon/toggle state so e.g. extending to 2029 keeps the fast trend in frame.
   const yhiDyn = useMemo(() => {
-    let mx = 1; // never collapse below 1 hour
+    let dataMx = 1; // never collapse below 1 hour
+    for (const m of models) { const h = m.hi != null ? m.hi : m.p; if (h > dataMx) dataMx = h; }
+    if (!testedOnly) for (const m of predModels) if (m.p > dataMx) dataMx = m.p;
+    let mx = dataMx;
     for (const d of trendData)
       for (const k of ["slow","fast","decel"]) if (d[k] != null && d[k] > mx) mx = d[k];
-    for (const m of models) { const h = m.hi != null ? m.hi : m.p; if (h > mx) mx = h; }
-    if (!testedOnly) for (const m of predModels) if (m.p > mx) mx = m.p;
-    return niceCeil(mx);
+    // Trend lines are extrapolations and grow without bound: at the 2030 edge the
+    // 3.5-month doubling reaches ~65 years, which would add a decade of unlabelled
+    // axis and squash every measured point into the lower half. So they may not
+    // push the ceiling past the top labelled tick — they clip there instead.
+    // Real data and predictions still raise it if they ever climb that high.
+    const trendCap = Math.max(niceCeil(dataMx), YTICKS[YTICKS.length - 1]);
+    return Math.min(niceCeil(mx), trendCap);
   }, [trendData, models, predModels, testedOnly]);
   const yLogBot = Math.log(YLO), yLogTop = Math.log(yhiDyn);
   // Zoom state (ly0/ly1) lives in the active axis's units: ln(hours) for the
@@ -865,7 +883,9 @@ function App() {
 
   const xTicks = useMemo(() => {
     const t = [];
-    for (let y=2022; y<=2029; y++) { t.push(new Date(y,0,1).getTime()); if(y<2029) t.push(new Date(y,6,1).getTime()); }
+    // Derived from CS/CE so the ticks can't drift out of sync with the range.
+    const y0 = new Date(CS).getFullYear(), y1 = new Date(CE).getFullYear();
+    for (let y=y0; y<=y1; y++) { t.push(new Date(y,0,1).getTime()); if(y<y1) t.push(new Date(y,6,1).getTime()); }
     return t;
   }, []);
 
@@ -1056,8 +1076,15 @@ function App() {
                 ? <b style={{color:"#eee"}}>{txt}</b> : <>{txt}</>;
               const hlKey = m.idx ? yMode : (useP80 ? "p80" : "p50");
               return (<>
-                {r.p50 != null && <div>TH p50: {hl("p50", fmtH(r.p50/60))} · p80: {hl("p80", fmtH(r.p80/60))}
-                  <span style={{color:"#999"}}>{tag(r.thSrc)}</span></div>}
+                {r.p50 != null && (() => {
+                  // Lead with the horizon the p50/p80 toggle is on, spelled out
+                  // with its hours; the other one trails in natural units only.
+                  const lead = useP80 ? "p80" : "p50", trail = useP80 ? "p50" : "p80";
+                  const val = k => (k === "p50" ? r.p50 : r.p80) / 60;
+                  return (<div>TH {lead}: {hl(lead, fmtHLong(val(lead)))}
+                    {r[trail] != null && <> · {trail}: {hl(trail, fmtH(val(trail)))}</>}
+                    <span style={{color:"#999"}}>{tag(r.thSrc)}</span></div>);
+                })()}
                 {r.eci != null && <div style={{color:"#9ab7d3"}}>ECI: {hl("eci", r.eci)}
                   <span style={{color:"#999"}}>{tag(r.eciSrc)}</span></div>}
                 {r.aeci != null && <div style={{color:"#9ab7d3"}}>AECI: {hl("aeci", r.aeci)}

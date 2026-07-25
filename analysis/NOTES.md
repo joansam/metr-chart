@@ -110,6 +110,14 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Resulting plot aspect is ~2.1:1 at 1080p and ~1.8:1 at 1440p. Prose blocks
   keep a separate `PROSE_W` so line length stays readable when the chart is
   wider than text should be.
+- **Trend lines can't drive the y-ceiling past the top labelled tick.** The
+  chart runs to 2030, where the 3.5-month doubling reaches ~65 years. Letting
+  that set the ceiling added a decade of unlabelled axis and pushed every
+  measured point into the lower half, so `yhiDyn` caps the trend contribution
+  at the highest tick (6 yr) and the fast line simply clips there. Real data
+  and predictions are uncapped and still raise it. The alternative — extending
+  YTICKS to ~72 yr — was rejected: it costs ~15% vertical compression of the
+  whole chart to show one extrapolated line nobody should read literally.
 - **Prediction-basis hover copy** lives in `BASIS_DOC` in index.html and quotes
   fit statistics (R², n, points-per-doubling, the ~1.5x Anthropic/OpenAI
   intercept ratio) straight from this script's report. Regenerating the fits
