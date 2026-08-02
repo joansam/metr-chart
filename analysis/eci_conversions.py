@@ -115,14 +115,6 @@ MODELS = {
 # checkpoint at its system-card internal-availability date.
 IDX_DATE_OVERRIDES = {"Mythos Preview (Early)": "2026-02-24"}
 
-# Models kept out of the score-frontier trend fits while still being plotted,
-# and still contributing everywhere else (notably the ECI<->AECI regression,
-# which wants every model with both indices measured).
-#   Opus 5: looks like a distillation of the Mythos/Fable line rather than an
-#   independent frontier push, so letting its AECI lead the frontier would
-#   overstate the trend. The Opus 5 system card reaches the same conclusion by
-#   its own route, overlaying Opus 5 as a non-frontier point.
-TREND_EXCLUDE = {"Claude Opus 5"}
 
 # Sensitivity-analysis inputs (see Barry's Apr 30 post). GPT-3.5's ECI comes
 # from Epoch's back-extension of the index; it is blank in the main CSV.
@@ -349,7 +341,6 @@ def idx_rows(rows, fits):
                     "eci": eci, "aeci": aeci,
                     "eciImp": eci_imp, "aeciImp": aeci_imp,
                     "eciEst": est, "aeciEst": est,
-                    "noTrend": r["name"] in TREND_EXCLUDE,
                     "aeciLo": None if (aeci_imp or est) else r["aeciLo"],
                     "aeciHi": None if (aeci_imp or est) else r["aeciHi"],
                     "p50": r["p50"], "p80": r["p80"], "l": r["lab"]})
@@ -379,8 +370,7 @@ def emit_js(preds, idx, fits):
     lines.append("];")
     lines.append("const IDX_RAW = [")
     for r in idx:
-        flags = "".join(f", {k}: true"
-                        for k in ("eciImp", "aeciImp", "eciEst", "aeciEst", "noTrend") if r[k])
+        flags = "".join(f", {k}: true" for k in ("eciImp", "aeciImp", "eciEst", "aeciEst") if r[k])
         ci = (f', aeciLo: {r["aeciLo"]}, aeciHi: {r["aeciHi"]}'
               if r["aeciLo"] is not None else "")
         th = (f', p50: {r["p50"]}, p80: {r["p80"]}' if r["p50"] is not None else "")
@@ -436,7 +426,7 @@ def check_html(preds, idx, fits):
         m = re.search(r'n:\s*"' + re.escape(r["n"]) + r'",\s*d:\s*"([\d-]+)",\s*'
                       r'eci:\s*([\d.]+),\s*aeci:\s*([\d.]+)'
                       r'(,\s*eciImp:\s*true)?(,\s*aeciImp:\s*true)?'
-                      r'(,\s*eciEst:\s*true)?(,\s*aeciEst:\s*true)?(,\s*noTrend:\s*true)?'
+                      r'(,\s*eciEst:\s*true)?(,\s*aeciEst:\s*true)?'
                       r'(?:,\s*aeciLo:\s*([\d.]+),\s*aeciHi:\s*([\d.]+))?'
                       r'(?:,\s*p50:\s*([\d.]+),\s*p80:\s*([\d.]+))?', html)
         if not m:
@@ -444,14 +434,14 @@ def check_html(preds, idx, fits):
             ok = False
             continue
         compare(r["n"], [r["d"], r["eci"], r["aeci"], r["eciImp"], r["aeciImp"],
-                         r["eciEst"], r["aeciEst"], r["noTrend"],
+                         r["eciEst"], r["aeciEst"],
                          r["aeciLo"] or 0.0, r["aeciHi"] or 0.0,
                          r["p50"] or 0.0, r["p80"] or 0.0],
                 [m.group(1), float(m.group(2)), float(m.group(3)),
                  bool(m.group(4)), bool(m.group(5)),
-                 bool(m.group(6)), bool(m.group(7)), bool(m.group(8)),
-                 float(m.group(9) or 0), float(m.group(10) or 0),
-                 float(m.group(11) or 0), float(m.group(12) or 0)])
+                 bool(m.group(6)), bool(m.group(7)),
+                 float(m.group(8) or 0), float(m.group(9) or 0),
+                 float(m.group(10) or 0), float(m.group(11) or 0)])
     print("OK: index.html PRED_RAW+IDX_RAW match fits" if ok else "*** MISMATCH ***")
     return ok
 

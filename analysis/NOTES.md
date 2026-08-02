@@ -53,22 +53,23 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
   earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
-- **Opus 5 is held out of the score-frontier trends, but not the conversion
-  fit.** It looks like a distillation of the Mythos/Fable line rather than an
-  independent frontier push — which is also the likeliest reading of why its
-  AECI (162.1) leads Mythos 5 while its ECI (161.05) trails Fable 5 — so
-  letting it lead the AECI frontier would overstate the trend. It is listed in
-  `TREND_EXCLUDE`, which emits `noTrend: true` on its IDX_RAW row; the chart's
-  `isIdxFrontier` drops those alongside estimated-from-TH points. With it out,
-  the fast AECI trend is 14.44 pts/yr over n=11 rather than 14.40 over n=12.
-  The Opus 5 system card reaches the same place by its own route, overlaying
-  Opus 5 as a *non-frontier* point ("as with Claude Opus 4.7 and Claude Opus
-  4.8") — though there "frontier" means Anthropic's own Mythos-class line.
-  This does NOT touch the ECI<->AECI regression, where Opus 5 is wanted: it is
-  the first model with both indices measured and it is what pulled that line
-  to nearly 1:1. Nor the ECI frontier, which it misses on the numbers anyway.
-  Note the exclusion is a judgement about this model's provenance, not a rule
-  — every other lab's models still join the frontier purely by running max.
+- **Opus 5 gets no special treatment.** Every mechanism applies to it by the
+  same rule as everything else, and the outcomes fall out of the data:
+  no METR run, so it is absent from the TH frontier and the TH regressions,
+  exactly like the other prediction-only rows; both indices measured, so it
+  joins the ECI<->AECI fit; Anthropic, so its horizon is predicted through the
+  AECI fit. On the score frontiers the running max puts it on AECI (162.1 >
+  Mythos 5's 161.29) and off ECI (161.05 < Fable 5's 161.55) — it is currently
+  the only model the two views disagree about, but that is the rule reporting
+  a real split, not a problem needing a fix.
+  A `TREND_EXCLUDE` hold-out was briefly added to keep it off the AECI
+  frontier, on the theory that a distillation of the Mythos/Fable line is not
+  an independent frontier push. It was removed: it changed the AECI trend by
+  0.3% (14.44 -> 14.40 pts/yr) and the ECI trend by nothing, and it would have
+  been the only per-model judgement anywhere in the chart's fits. Not worth
+  the inconsistency. If a future model genuinely needs holding out, add the
+  mechanism back deliberately and document why here — do not reach for it to
+  shave fractions of a point.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
   *API access* — Moonshot shipped K2.x as open weights but had not released
   K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
