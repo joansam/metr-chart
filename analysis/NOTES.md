@@ -66,6 +66,10 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   14.40 pts/yr, and leaves the ECI trend untouched. The two are within
   each other's CIs anyway (Opus 5 [158.0, 167.3] vs Mythos 5 [157.3, 165.4]),
   and "pin new trend to 13.5/yr" reproduces the card's rate exactly.
+  Kept in the trend deliberately (owner's call, for completeness) even though
+  Opus 5 looks like a distillation of the Mythos/Fable line rather than an
+  independent frontier push — which is also the most likely reading of why its
+  AECI leads Mythos 5 while its ECI trails Fable 5.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
   *API access* — Moonshot shipped K2.x as open weights but had not released
   K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
@@ -102,6 +106,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   than the TH view assumes, so it accrues more decay: 7.3 points of shortfall
   by 2029 against 5.9 if the TH curve's shortfall were imported directly. Both are defensible; the gap is a statement about the
   AECI-vs-TH baseline disagreement, not about the slowdown model.
+- **Horizon unit ladder**: `fmtH` shows a value in the largest unit it reaches
+  at least TWO of — 90 min stays minutes, 8 hours stays hours, 24 months reads
+  "2 years". Day/week/month are the 8h/40h/160h working units the right-hand
+  axis labels use; a year is 12 such months (1920h). The threshold tests the
+  ROUNDED figure, so the larger unit never prints "1.x" and the smaller never
+  prints a boundary value — that is what keeps "24 months" from appearing.
+  Before this the ladder stepped at 1x every rung except months->years.
 - **Responsive sizing**: the shell grows into the viewport (`SHELL_W`) instead
   of the old fixed 900px, and `CHART_HEIGHT` is 5/8 of viewport height (floor
   540, ceiling 950). Height is deliberately NOT "whatever is left after the

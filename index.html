@@ -348,23 +348,31 @@ const unit = (v, u, dp=1) => {
   const s = v.toFixed(dp);
   return `${s.replace(/\.0+$/, "")} ${s === (1).toFixed(dp) ? u : u + "s"}`;
 };
+// Unit ladder, in hours. Day/week/month are the 8h/40h/160h working units the
+// right-hand axis labels already use; a year is 12 of those months (1920h),
+// matching the "1 yr" tick.
+const UNITS = [[1920, "year"], [160, "month"], [40, "week"], [8, "day"], [1, "hour"]];
+// A value is shown in the largest unit it reaches at least TWO of. One rule at
+// every step: 90 minutes stays "90 min", 8 hours stays "8 hours", 24 months
+// becomes "2 years". Anything under two hours is minutes.
+// The test is on the ROUNDED figure, which cuts both ways deliberately: the
+// larger unit never prints "1.x", and the smaller one never prints a value
+// sitting on the boundary — so "24 months" cannot appear, only "2 years".
+const pickUnit = h => UNITS.find(([size]) => Number((h/size).toFixed(1)) >= 2);
 const fmtH = h => {
+  const u = pickUnit(h);
+  if (u) return unit(h/u[0], u[1]);
   if (h<1/60) return `${(h*60).toFixed(2).replace(/\.?0+$/, "")} min`;
-  if (h<1) return `${(h*60).toFixed(1).replace(/\.0$/, "")} min`;
-  if (h<8) return unit(h, "hour");
-  if (h<40) return unit(h/8, "day");
-  if (h<160) return unit(h/40, "week");
-  // Years past 24 months. The 23.95 catches values that would *round* to
-  // "24.0 months", so that reading never appears. 1920h = 12 months = 1 year,
-  // matching the axis ticks.
-  if (h/160 < 23.95) return unit(h/160, "month");
-  return unit(h/1920, "year");
+  return `${(h*60).toFixed(1).replace(/\.0$/, "")} min`;
 };
 // The active horizon also gets its raw hours, since days/weeks/months are
-// 8-hour units and the conversion isn't obvious. Skipped below 8h, where the
-// natural unit already IS hours (or minutes) and the gloss would just repeat.
-const fmtHLong = h => h < 8 ? fmtH(h)
-  : `${fmtH(h)} (${h < 10 ? unit(h, "hour") : unit(h, "hour", 0)})`;
+// 8-hour units and the conversion isn't obvious. Skipped when the chosen unit
+// is hours or minutes already, where the gloss would just repeat itself.
+const fmtHLong = h => {
+  const u = pickUnit(h);
+  return !u || u[0] === 1 ? fmtH(h)
+    : `${fmtH(h)} (${h < 10 ? unit(h, "hour") : unit(h, "hour", 0)})`;
+};
 
 function App() {
   const [extendSlow, setExtendSlow] = useState(false);
