@@ -53,6 +53,16 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
   earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
+- **Why the fits carry no per-model exceptions.** The bar for special-casing is
+  high here for a scientific reason, not a stylistic one: every hand-added
+  exception is a researcher degree of freedom, and enough of them would let
+  these fits be tuned to any conclusion. That improves in-sample appearance and
+  not out-of-sample accuracy — which is the only accuracy that matters, since
+  the whole point is predicting horizons for models METR has not tested. So an
+  exception that makes a trend look better is evidence against itself, and a
+  uniform rule producing an uglier number is usually the data talking. Earn
+  accuracy through the validation ledger below (score predictions against METR
+  results as they publish), not by adjusting what the fits are allowed to see.
 - **Opus 5 gets no special treatment.** Every mechanism applies to it by the
   same rule as everything else, and the outcomes fall out of the data:
   no METR run, so it is absent from the TH frontier and the TH regressions,

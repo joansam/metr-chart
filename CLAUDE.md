@@ -19,6 +19,29 @@ exceptions. Do not add per-model flags, hand-maintained exclusion lists, or
 bespoke branches unless the alternative genuinely doesn't work — "it would make
 the number slightly nicer" is not a reason.
 
+**The reason is scientific, not convenience.** This is not mainly about tidy
+code or readability. Every special case is another researcher degree of
+freedom, and with enough of them you can tune this chart's fits to look however
+you like. That buys apparent in-sample accuracy and does nothing for
+out-of-sample accuracy — it is overfitting, dressed up as judgement. These fits
+are used to predict horizons for models METR hasn't tested, so out-of-sample is
+the *only* thing that matters. The goal is to do it the right way, not the
+convenient way.
+
+Two consequences that invert the usual instinct:
+
+- **An exception that improves the fit is more suspect, not less.** If the
+  argument for excluding a point is that the trend looks better without it,
+  that is evidence against making the exclusion.
+- **The uniform rule is allowed to look worse.** If the simple rule produces an
+  uglier number or a slower trend, that is probably the data talking. Report it
+  rather than tuning it away.
+
+The honest way to earn predictive accuracy here is out-of-sample scoring —
+record what the fits predicted, then check them against METR results when they
+publish (see the validation-ledger item in `analysis/NOTES.md`) — not tightening
+the fit against data already in hand.
+
 Before adding an exception, measure what it actually buys and say so. If the
 answer is a fraction of a percent, it isn't worth the inconsistency. If an
 exception really is necessary, add it deliberately, document the reasoning and
