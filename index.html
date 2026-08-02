@@ -193,7 +193,7 @@ const IDX_RAW = [
   { n: "GLM-5.2",             d: "2026-06-16", eci: 152.13, aeci: 151.09, aeciImp: true, l: "zai" },
   { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 161.69, aeci: 160.56, aeciImp: true, l: "openai" },
   { n: "Kimi K3",             d: "2026-07-16", eci: 157.39, aeci: 156.3, aeciImp: true, l: "moonshot" },
-  { n: "Opus 5",              d: "2026-07-24", eci: 161.05, aeci: 162.1, aeciLo: 158.0, aeciHi: 167.3, l: "anthropic" },
+  { n: "Opus 5",              d: "2026-07-24", eci: 161.05, aeci: 162.1, noTrend: true, aeciLo: 158.0, aeciHi: 167.3, l: "anthropic" },
 ];
 // ── One record per model for tooltips, merging M_RAW (measured horizons),
 // PRED_RAW (predicted horizons) and IDX_RAW (indices). Every model gets TH,
@@ -453,9 +453,11 @@ function App() {
   // Cross-lab running-max frontier on the active score (same rule as the
   // time-horizon SOTA set: a model is frontier if it beats every earlier one).
   // Estimated-from-TH points never join: an ECI derived from a horizon must
-  // not steer the score trend.
+  // not steer the score trend. Nor do noTrend models (see TREND_EXCLUDE in
+  // eci_conversions.py) — they are plotted and feed the ECI<->AECI fit, but
+  // are not treated as frontier pushes.
   const isIdxFrontier = useMemo(() => {
-    const sorted = idxModels.filter(m => !m.est).sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
+    const sorted = idxModels.filter(m => !m.est && !m.noTrend).sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
     const set = new Set(); let mx = -Infinity;
     for (const m of sorted) { if (m.sc > mx) { set.add(m.n + m.d); mx = m.sc; } }
     return m => set.has(m.n + m.d);
@@ -1113,7 +1115,9 @@ function App() {
               <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
             {m.idx && !isIdxFrontier(m) &&
               <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>
-                {m.est ? "Estimated — excluded from trend fit" : "Off-frontier — excluded from trend fit"}</div>}
+                {m.est ? "Estimated — excluded from trend fit"
+                  : m.noTrend ? "Held out of the trend fit (not an independent frontier push)"
+                  : "Off-frontier — excluded from trend fit"}</div>}
           </div>);
         })()}
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>

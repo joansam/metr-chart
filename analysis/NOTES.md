@@ -53,23 +53,22 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
   earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
-- **Opus 5 vs the card's frontier set**: the Opus 5 card overlays Opus 5 as a
-  *non-frontier* point ("as with Claude Opus 4.7 and Claude Opus 4.8") and
-  keeps its slope ratios unchanged — "frontier" there means Anthropic's own
-  Mythos-class line. The chart instead applies its uniform cross-lab
-  running-max rule, under which Opus 5's AECI 162.1 does beat Mythos 5's 161.29
-  and joins the AECI frontier. (Its measured ECI, 161.05, sits below Fable 5's
-  161.55, so on the ECI frontier the question is moot — it is off it either
-  way.) Deliberate: hand-excluding a point on one lab's model-line taxonomy
-  would be inconsistent with how every other lab's models are treated, and the
-  cost is nil — including Opus 5 moves the fast AECI trend from 14.44 to
-  14.40 pts/yr, and leaves the ECI trend untouched. The two are within
-  each other's CIs anyway (Opus 5 [158.0, 167.3] vs Mythos 5 [157.3, 165.4]),
-  and "pin new trend to 13.5/yr" reproduces the card's rate exactly.
-  Kept in the trend deliberately (owner's call, for completeness) even though
-  Opus 5 looks like a distillation of the Mythos/Fable line rather than an
-  independent frontier push — which is also the most likely reading of why its
-  AECI leads Mythos 5 while its ECI trails Fable 5.
+- **Opus 5 is held out of the score-frontier trends, but not the conversion
+  fit.** It looks like a distillation of the Mythos/Fable line rather than an
+  independent frontier push — which is also the likeliest reading of why its
+  AECI (162.1) leads Mythos 5 while its ECI (161.05) trails Fable 5 — so
+  letting it lead the AECI frontier would overstate the trend. It is listed in
+  `TREND_EXCLUDE`, which emits `noTrend: true` on its IDX_RAW row; the chart's
+  `isIdxFrontier` drops those alongside estimated-from-TH points. With it out,
+  the fast AECI trend is 14.44 pts/yr over n=11 rather than 14.40 over n=12.
+  The Opus 5 system card reaches the same place by its own route, overlaying
+  Opus 5 as a *non-frontier* point ("as with Claude Opus 4.7 and Claude Opus
+  4.8") — though there "frontier" means Anthropic's own Mythos-class line.
+  This does NOT touch the ECI<->AECI regression, where Opus 5 is wanted: it is
+  the first model with both indices measured and it is what pulled that line
+  to nearly 1:1. Nor the ECI frontier, which it misses on the numbers anyway.
+  Note the exclusion is a judgement about this model's provenance, not a rule
+  — every other lab's models still join the frontier purely by running max.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
   *API access* — Moonshot shipped K2.x as open weights but had not released
   K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
