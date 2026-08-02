@@ -13,14 +13,16 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 
 - `../benchmark_results_1_1 (5).yaml` — METR-Horizon-v1.1 ground truth.
 - `data/epoch_capabilities_index.csv` — Epoch AI Benchmarking Hub download
-  (Jul 24 2026, CC-BY 4.0, cite epoch.ai/benchmarks). METR Time Horizons is
+  (Aug 2 2026, CC-BY 4.0, cite epoch.ai/benchmarks). METR Time Horizons is
   NOT among the ~52 benchmarks feeding the ECI, so TH-on-ECI fits aren't
   circular. Reasoning-effort/context variants (`_high`, `_32K`, ...) share
   their base model's score. Refresh it from
   `https://epoch.ai/data/benchmark_data.zip` (the "LLM Benchmark Data" link on
   epoch.ai/benchmarks/use-this-data); the ECI CSV is one member of that zip.
   Epoch refit the index globally on each refresh, so every score drifts a
-  little (Jul 15 -> Jul 24 moved tracked models by at most 0.3 pts).
+  little — Jul 15 -> Jul 24 moved tracked models by at most 0.3 pts, and
+  Jul 24 -> Aug 2 by up to 1.8 (Kimi K3), so never treat a refresh as a
+  no-op: regenerate the arrays and re-check the stats quoted in BASIS_DOC.
 - `data/aeci_systemcards.csv` — AECI point estimates with CIs, one row per
   model, `source` naming the system card each row came from:
   - `fable5_card` — Barry's extraction of the "Anthropic ECI over time" chart
@@ -41,7 +43,7 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 - **Mythos 5 vs Fable 5**: the system card's AECI point is Mythos 5; Epoch's
   public ECI measures the GA Fable 5. Same underlying model, different
   deployment variants — kept as separate rows, and the cross-variant pair is
-  excluded from the ECI<->AECI fit basis (n=10 within-variant Claude pairs).
+  excluded from the ECI<->AECI fit basis (n=11 within-variant Claude pairs).
 - **Provenance tiers**: measured > imputed (one index derived from the other
   via the ECI<->AECI line) > estimated (both indices derived from a measured
   METR horizon). Imputed points join the score-frontier trend fits (toggle
@@ -55,11 +57,13 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   *non-frontier* point ("as with Claude Opus 4.7 and Claude Opus 4.8") and
   keeps its slope ratios unchanged — "frontier" there means Anthropic's own
   Mythos-class line. The chart instead applies its uniform cross-lab
-  running-max rule, under which Opus 5's 162.1 does beat Mythos 5's 161.29 and
-  joins the score frontier. Deliberate: hand-excluding a point on one lab's
-  model-line taxonomy would be inconsistent with how every other lab's models
-  are treated, and the cost is nil — including Opus 5 moves the fast AECI
-  trend from 14.17 to 14.21 pts/yr (ECI: 14.95 -> 14.98). The two are within
+  running-max rule, under which Opus 5's AECI 162.1 does beat Mythos 5's 161.29
+  and joins the AECI frontier. (Its measured ECI, 161.05, sits below Fable 5's
+  161.55, so on the ECI frontier the question is moot — it is off it either
+  way.) Deliberate: hand-excluding a point on one lab's model-line taxonomy
+  would be inconsistent with how every other lab's models are treated, and the
+  cost is nil — including Opus 5 moves the fast AECI trend from 14.44 to
+  14.40 pts/yr, and leaves the ECI trend untouched. The two are within
   each other's CIs anyway (Opus 5 [158.0, 167.3] vs Mythos 5 [157.3, 165.4]),
   and "pin new trend to 13.5/yr" reproduces the card's rate exactly.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
@@ -92,12 +96,11 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   now grows to frame the curves while the scenario is displayed.
   One residual inconsistency worth knowing: the two views fit their baselines
   independently, so they don't describe quite the same world. The ECI trend
-  (15.0 pts/yr) implies a 3.51-month TH doubling, matching the TH view's fixed
-  3.5 months almost exactly — there, the two slowdowns agree to within 0.1
-  points at 2029. The AECI trend (14.2 pts/yr) implies 3.10 months, i.e.
-  faster horizon growth than the TH view assumes, so it accrues more decay:
-  7.2 points of shortfall by 2029 against 5.9 if the TH curve's shortfall were
-  imported directly. Both are defensible; the gap is a statement about the
+  (14.8 pts/yr) implies a 3.59-month TH doubling, close to the TH view's fixed
+  3.5 months — there, the two slowdowns agree to within ~0.3 points at 2029.
+  The AECI trend (14.4 pts/yr) implies 3.06 months, i.e. faster horizon growth
+  than the TH view assumes, so it accrues more decay: 7.3 points of shortfall
+  by 2029 against 5.9 if the TH curve's shortfall were imported directly. Both are defensible; the gap is a statement about the
   AECI-vs-TH baseline disagreement, not about the slowdown model.
 - **Responsive sizing**: the shell grows into the viewport (`SHELL_W`) instead
   of the old fixed 900px, and `CHART_HEIGHT` is 5/8 of viewport height (floor
@@ -166,6 +169,8 @@ plain fetchers on
   METR publishes actuals (first real test: a METR run of launch-version
   Mythos/Fable 5 vs the 61.3h/8.2h AECI-fit prediction, then Opus 5 vs
   71.4h/9.5h).
-- Opus 5 has no Epoch ECI row yet (its public ECI is imputed from the AECI
-  fit, 164.2). Worth re-pulling the ECI zip in a week or two and letting the
-  measured value replace the imputed one.
+- Opus 5's Epoch ECI landed on Aug 2 2026 (161.05, dated 2026-07-24) and
+  replaced the imputed 164.2. It is the first prediction-only row with BOTH
+  indices measured, so it joins the ECI<->AECI basis (n=10 -> 11) and pulled
+  that line close to 1:1 — AECI = 0.30 + 0.991*ECI, from 4.70 + 0.959*ECI.
+  Its horizon still routes through the AECI fit, as for any Anthropic model.

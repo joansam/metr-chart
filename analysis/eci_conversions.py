@@ -76,9 +76,10 @@ MODELS = {
     # cross-variant pair never enters the ECI->AECI fit.
     "Claude Mythos 5":         (None,                                 None,                         "anthropic"),
     "Claude Fable 5":          (None,                                 "claude-fable-5",             "anthropic"),
-    # Opus 5 (system card Jul 24 2026): AECI only so far — no METR run, and
-    # Epoch's Jul 24 ECI snapshot doesn't carry it yet.
-    "Claude Opus 5":           (None,                                 None,                         "anthropic"),
+    # Opus 5 has no METR run, but now carries BOTH indices as measured values —
+    # the Jul 24 system card's AECI and Epoch's published ECI — so unlike the
+    # other prediction-only rows it joins the ECI<->AECI fit basis.
+    "Claude Opus 5":           (None,                                 "claude-opus-5",              "anthropic"),
     "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
     "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
     "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
@@ -134,7 +135,7 @@ PREDICTED_DATES = {
     "Claude Mythos Preview": "2026-04-07",
     "Claude Mythos 5":       "2026-06-09",
     "Claude Fable 5":        "2026-06-09",
-    # Opus 5 has no Epoch row yet; its system card is dated Jul 24 2026.
+    # Epoch dates Opus 5 to the same day as its system card.
     "Claude Opus 5":         "2026-07-24",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
