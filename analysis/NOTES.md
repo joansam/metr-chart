@@ -46,9 +46,25 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   excluded from the ECI<->AECI fit basis (n=11 within-variant Claude pairs).
 - **Provenance tiers**: measured > imputed (one index derived from the other
   via the ECI<->AECI line) > estimated (both indices derived from a measured
-  METR horizon). Imputed points join the score-frontier trend fits (toggle
-  "show tested models only" to refit measured-only); estimated points never
-  join any fit — a TH-derived ECI steering the ECI trend would be circular.
+  METR horizon). **Only measured values set a score frontier.** Imputed and
+  estimated points are still plotted, but a derived score carries no
+  information the fit that produced it didn't already have, so letting one set
+  the trend is the model steering its own input.
+  This was not always so — imputed points used to join, and it went wrong in a
+  visible way: Mythos 5's ECI is imputed from its AECI (162.43) while Fable 5's
+  is measured by Epoch (161.55). They are the same underlying model on the same
+  day, so the estimate outranked the real measurement, took the frontier, and
+  knocked Fable 5, GPT-5.5 and GPT-5.6 Sol — all measured — off it.
+  Effects of the fix: the ECI trend goes 14.79 -> 14.27 pts/yr with n=11 -> 12,
+  every member now measured. The AECI trend goes 14.40 -> 15.84 with n=12 -> 10
+  and becomes Anthropic-only, because AECI is published only for Anthropic
+  models and every other lab's AECI here is just its ECI mapped through the
+  fitted line. That is the honest reading of what the AECI view measures.
+  Two consequences to know: the AECI view no longer draws a pre-mid-2024
+  "previous trend" at all (one measured point, no line to fit — `lin` returns
+  null and the legend entry drops rather than showing NaN); and "show tested
+  models only" no longer changes a score trend, since the frontier is already
+  measured-only. It now only controls which dots are drawn.
 - **Estimation/prediction routes are lab-consistent**: Anthropic models go
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
@@ -69,9 +85,9 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   exactly like the other prediction-only rows; both indices measured, so it
   joins the ECI<->AECI fit; Anthropic, so its horizon is predicted through the
   AECI fit. On the score frontiers the running max puts it on AECI (162.1 >
-  Mythos 5's 161.29) and off ECI (161.05 < Fable 5's 161.55) — it is currently
-  the only model the two views disagree about, but that is the rule reporting
-  a real split, not a problem needing a fix.
+  Mythos 5's 161.29) and off ECI (161.05 < Fable 5's 161.55). Since the AECI
+  frontier is Anthropic-only, that split is now the normal case for Claude
+  models rather than anything peculiar to Opus 5.
   A `TREND_EXCLUDE` hold-out was briefly added to keep it off the AECI
   frontier, on the theory that a distillation of the Mythos/Fable line is not
   an independent frontier push. It was removed: it changed the AECI trend by

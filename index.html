@@ -450,12 +450,17 @@ function App() {
     })).filter(m => !testedOnly || (!m.imp && !m.est));
   }, [yMode, isScore, testedOnly]);
 
-  // Cross-lab running-max frontier on the active score (same rule as the
-  // time-horizon SOTA set: a model is frontier if it beats every earlier one).
-  // Estimated-from-TH points never join: an ECI derived from a horizon must
-  // not steer the score trend.
+  // Running-max frontier on the active score (same rule as the time-horizon
+  // SOTA set: a model is frontier if it beats every earlier one), over models
+  // whose score for THIS view was actually measured. Derived scores — imputed
+  // through the ECI<->AECI line, or estimated from a METR horizon — are still
+  // plotted, but must not define the frontier: they carry no information the
+  // fit that produced them didn't already have, so letting them set the trend
+  // would be the model steering its own input. Concretely it was suppressing
+  // real Epoch measurements, e.g. Mythos 5's imputed ECI outranking Fable 5's
+  // measured one for the same underlying model on the same day.
   const isIdxFrontier = useMemo(() => {
-    const sorted = idxModels.filter(m => !m.est).sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
+    const sorted = idxModels.filter(m => !m.est && !m.imp).sort((a,b) => (a.ts - b.ts) || (b.sc - a.sc));
     const set = new Set(); let mx = -Infinity;
     for (const m of sorted) { if (m.sc > mx) { set.add(m.n + m.d); mx = m.sc; } }
     return m => set.has(m.n + m.d);
@@ -468,6 +473,10 @@ function App() {
     if (!isScore) return null;
     const lin = pts => {
       const n = pts.length;
+      // A segment can be left with too few frontier points to define a line —
+      // the AECI view's pre-mid-2024 era has only one, since AECI is measured
+      // for Anthropic models only. Report no trend rather than a NaN one.
+      if (n < 2) return null;
       let sx=0, sy=0, sxx=0, sxy=0;
       for (const m of pts) { sx+=m.ts; sy+=m.sc; sxx+=m.ts*m.ts; sxy+=m.ts*m.sc; }
       const b = (n*sxy - sx*sy) / (n*sxx - sx*sx);
@@ -520,7 +529,7 @@ function App() {
   // Score-space slowdown: growth rate decays decayFrac per TH-doubling-equivalent
   // of score gained (K points = ln2 / TH-fit slope), mirroring the TH scenario.
   const scoreDecel = useMemo(() => {
-    if (!scoreFit) return null;
+    if (!scoreFit || !scoreFit.fast) return null;
     const K = Math.LN2 / (yMode === "eci" ? FITS.eciP50.b : FITS.aeciP50.b);
     return t => {
       const f = scoreFit.fast, r0 = f.slope;
@@ -558,9 +567,9 @@ function App() {
     const d = [], step = 7*86400000;
     for (let t=CS; t<=CE; t+=step) d.push({
       ts: t,
-      scSlow: (extendSlow || t <= CUT) ? scoreFit.slow.pred(t) : null,
-      scFast: (showFast && t >= CUT) ? scoreFit.fast.pred(t) : null,
-      scDecel: (showDecel && t >= CUT) ? scoreDecel(t) : null,
+      scSlow: (scoreFit.slow && (extendSlow || t <= CUT)) ? scoreFit.slow.pred(t) : null,
+      scFast: (scoreFit.fast && showFast && t >= CUT) ? scoreFit.fast.pred(t) : null,
+      scDecel: (scoreDecel && showDecel && t >= CUT) ? scoreDecel(t) : null,
     });
     return d;
   }, [scoreFit, scoreDecel, extendSlow, showFast, showDecel]);
@@ -1023,15 +1032,15 @@ function App() {
   // the two never disagree about which year a start date falls in).
   const decYear = new Date(decayStartMs).getFullYear();
   const decelLabel = `Slowdown: −${decayPct}%/doubling from ${decStart}`;
-  const scoreSlowLabel = scoreFit
+  const scoreSlowLabel = scoreFit && scoreFit.slow
     ? `Previous trend: +${scoreFit.slow.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (n=${scoreFit.slow.n})`
     : "";
-  const scoreFastLabel = scoreFit
+  const scoreFastLabel = scoreFit && scoreFit.fast
     ? (scoreFit.fast.pinned
         ? `New trend: +13.5 ${yMode.toUpperCase()}/yr (system-card rate, n=${scoreFit.fast.n})`
         : `New trend: +${scoreFit.fast.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (2024+, n=${scoreFit.fast.n})`)
     : "";
-  const scoreDecelLabel = `Slowdown: −${decayPct}%/doubling-equiv from ${decStart}`;
+  const scoreDecelLabel = scoreDecel ? `Slowdown: −${decayPct}%/doubling-equiv from ${decStart}` : "";
 
   return (
     <div style={{background:"#12121f",minHeight:"100vh",padding:isMobile?"16px 6px":"32px 24px"}}>
@@ -1113,7 +1122,9 @@ function App() {
               <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>Not {useP80?"p80":"p50"}-frontier — excluded from fit</div>}
             {m.idx && !isIdxFrontier(m) &&
               <div style={{fontSize:11,color:"#f0c050",marginTop:4}}>
-                {m.est ? "Estimated — excluded from trend fit" : "Off-frontier — excluded from trend fit"}</div>}
+                {m.est ? "Estimated — excluded from trend fit"
+                  : m.imp ? "Imputed — excluded from trend fit"
+                  : "Off-frontier — excluded from trend fit"}</div>}
           </div>);
         })()}
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -1154,7 +1165,7 @@ function App() {
         {/* Custom legend */}
         <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
           {isScore && <>
-            {[[COL.slow,scoreSlowLabel],[COL.fast,scoreFastLabel],[COL.decel,scoreDecelLabel]].map(([c,lb])=>(
+            {[[COL.slow,scoreSlowLabel],[COL.fast,scoreFastLabel],[COL.decel,scoreDecelLabel]].filter(([,lb])=>lb).map(([c,lb])=>(
               <div key={lb} style={{display:"flex",alignItems:"center",gap:6}}>
                 <svg width={24} height={3}><line x1={0} y1={1.5} x2={24} y2={1.5} stroke={c} strokeWidth={2} strokeDasharray="6 3"/></svg>
                 {lb}
@@ -1296,9 +1307,10 @@ function App() {
               Linear Y-axis: {yMode==="eci" ? "Epoch Capabilities Index (public ECI)" :
               "Anthropic internal ECI (AECI, extracted from system-card charts)"}. Filled dots are
               measured scores; dashed diamonds are imputed through the fitted ECI↔AECI line
-              (AECI = 4.16 + 0.963·ECI, within-variant Claude pairs). Trends are linear fits to the
-              cross-lab running-max frontier, split at the same mid-2024 break as the time-horizon
-              view. Data: Epoch AI Benchmarking Hub / abstatisticalconsulting.substack.com.
+              (AECI = {FITS.eciAeci.a.toFixed(2)} + {FITS.eciAeci.b.toFixed(3)}·ECI, within-variant
+              Claude pairs). Trends are linear fits to the running-max frontier over measured
+              scores only — imputed and estimated points are plotted but never set the frontier —
+              split at the same mid-2024 break as the time-horizon view. Data: Epoch AI Benchmarking Hub / abstatisticalconsulting.substack.com.
             </p>
           : <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5,maxWidth:PROSE_W}}>
           Log-scale Y-axis (hours of human-expert work). 7-month trend anchored to pre-mid-2024 SOTA;
