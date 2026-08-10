@@ -169,6 +169,43 @@ const LOCAL = {
   await page.waitForTimeout(800);
   await page.screenshot({ path: 'chart_eci_tested.png' });
 
+  // ── Finance section (Epoch AI-companies data) ──
+  await page.getByText('AI Lab Finance Trends').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(600);
+  // Revenue view: xAI has a fitted line (n=4) and its cyan is unique to it
+  const strokeDrawn = hex => page.evaluate(h =>
+    [...document.querySelectorAll('path')].some(p =>
+      (p.getAttribute('stroke') || '').toLowerCase() === h &&
+      (p.getAttribute('d') || '').length > 10), hex);
+  if (!await strokeDrawn('#2fbcd3')) failures.push('finance rev: xAI trend line not drawn');
+  // hover an xAI revenue dot → tooltip with the dollar figure
+  const finDot = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('circle')].find(el =>
+      el.getAttribute('fill') === '#2fbcd3' && el.getAttribute('r') === '4.5');
+    if (!c) return null;
+    const r = c.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!finDot) failures.push('finance rev: no xAI dots rendered');
+  else {
+    await page.mouse.move(finDot.x, finDot.y);
+    await page.waitForTimeout(600);
+    if (!await page.evaluate(() => document.body.innerText.includes('Annualized revenue:')))
+      failures.push('finance rev: dot tooltip missing');
+    await page.mouse.move(finDot.x + 200, finDot.y - 100);
+    await page.waitForTimeout(300);
+  }
+  await page.screenshot({ path: 'chart_fin_rev.png' });
+  // Valuations view: Mistral is fitted here (n=5) but not in revenue (n=2)
+  await page.getByRole('button', { name: 'Valuations' }).click();
+  await page.waitForTimeout(800);
+  if (!await strokeDrawn('#e069a8')) failures.push('finance val: Mistral trend line not drawn');
+  if (!await page.evaluate(() => document.body.innerText.includes('closed funding round')))
+    failures.push('finance val: caption did not switch');
+  await page.screenshot({ path: 'chart_fin_val.png' });
+  await page.getByRole('button', { name: 'Revenue' }).click();
+  await page.waitForTimeout(400);
+
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');
   if (errors.length || failures.length) process.exitCode = 1;

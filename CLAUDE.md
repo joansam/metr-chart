@@ -59,13 +59,14 @@ per-model exception in the whole chart. The uniform rule won.
 - `analysis/NOTES.md` — project context that isn't in the code: data
   provenance, methodology decisions and why they were made, environment quirks.
   Read it before changing anything analytical; update it when a decision changes.
-- All chart data is GENERATED. Never hand-edit `M_RAW`, `PRED_RAW`, `IDX_RAW`
-  or `FITS` in `index.html`.
+- All chart data is GENERATED. Never hand-edit `M_RAW`, `PRED_RAW`, `IDX_RAW`,
+  `FITS`, `FIN_RAW` or `FIN_FITS` in `index.html`.
 
 Verify with:
 
 ```
 python3 gen_model_data.py --check              # M_RAW matches the METR YAML
 python3 analysis/eci_conversions.py --check-html   # PRED_RAW/IDX_RAW/FITS match the fits
+python3 analysis/finance_data.py --check-html  # FIN_RAW/FIN_FITS match the Epoch CSVs
 cd analysis/render_test && npm test            # headless render of every view/toggle
 ```

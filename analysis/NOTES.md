@@ -23,6 +23,15 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   little — Jul 15 -> Jul 24 moved tracked models by at most 0.3 pts, and
   Jul 24 -> Aug 2 by up to 1.8 (Kimi K3), so never treat a refresh as a
   no-op: regenerate the arrays and re-check the stats quoted in BASIS_DOC.
+- `data/ai_companies_revenue_reports.csv` / `data/ai_companies_funding_rounds.csv`
+  — Epoch AI "AI Companies" hub download (Aug 10 2026 snapshot; revenue file
+  dated Jul 31, funding file Jul 31; CC-BY 4.0, cite epoch.ai/data/ai-companies).
+  Feeds the finance chart via `finance_data.py`. Refresh straight from
+  `https://epoch.ai/data/ai_companies_revenue_reports.csv` and
+  `https://epoch.ai/data/ai_companies_funding_rounds.csv` (updated ~weekly),
+  then regenerate with `--emit-js`. A refresh that adds a company not yet in
+  `finance_data.COMPANY_KEY` fails loudly — add it there and to COL/FIN_NAME
+  in index.html (new colors go through the CVD/contrast validation noted below).
 - `data/aeci_systemcards.csv` — AECI point estimates with CIs, one row per
   model, `source` naming the system card each row came from:
   - `fable5_card` — Barry's extraction of the "Anthropic ECI over time" chart
@@ -170,15 +179,41 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   override lives in `gen_model_data.DATE_OVERRIDES` and is mirrored in
   `eci_conversions.IDX_DATE_OVERRIDES`.
 
+- **Finance chart (revenue/valuations) rules are uniform by construction.**
+  Revenue: every dated full-company annualized figure counts — all confidence
+  tiers and all flavors (ARR / run rate / interpolation), because the flavor
+  mix is the labs' reporting inconsistency, not ours to adjudicate; it is
+  surfaced in tooltips instead of filtered on. Valuations: every closed round
+  with a dated post-money valuation, primary and secondary alike (both are
+  market-priced events); "late discussions"/cancelled rounds are out. Trends:
+  unweighted OLS of ln(USD) on time wherever a company has ≥4 qualifying
+  points in a series, dots-only below that — no per-company exceptions. All
+  trend lines extrapolate exactly six months past the day the page is opened
+  (uniform horizon that never silently ages, like DECAY_START_DEFAULT).
+  Two readings to keep honest about: these are *reported* figures at irregular
+  intervals, so the fits measure growth in what gets reported; and Anthropic's
+  10.6x/yr revenue slope is real in the data but leans on a tiny 2023 base.
+- **Finance-chart colors**: labs shared with the capability chart keep their
+  color (same entity, same hue, both charts; the open-weights gold now also
+  covers MiniMax). New hues — xAI #2fbcd3, Mistral #e069a8, Cohere #8f7bf0 —
+  were checked with the dataviz palette validator against the #12121f surface:
+  chroma, adjacent-pair CVD separation, normal-vision separation and contrast
+  all pass. (The validator's lightness-band check fails for the *pre-existing*
+  palette on this very dark surface; the new hues match that established
+  brightness rather than repainting the page.)
+
 ## Verification
 
 - `python3 gen_model_data.py --check` — M_RAW in index.html matches the YAML.
 - `python3 analysis/eci_conversions.py --check-html` — PRED_RAW, IDX_RAW and
   FITS in index.html match the regressions.
+- `python3 analysis/finance_data.py --check-html` — FIN_RAW and FIN_FITS in
+  index.html match the Epoch AI-companies CSVs.
 - `cd analysis/render_test && npm install && npm test` — headless-Chromium
   smoke test of every chart view/toggle.
 - All chart data is GENERATED (`gen_model_data.py`, `eci_conversions.py
-  --emit-js`) — never hand-edit M_RAW/PRED_RAW/IDX_RAW/FITS.
+  --emit-js`, `finance_data.py --emit-js`) — never hand-edit
+  M_RAW/PRED_RAW/IDX_RAW/FITS or FIN_RAW/FIN_FITS.
 
 ## Environment notes (Claude Code on the web sessions)
 
