@@ -202,6 +202,31 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   palette on this very dark surface; the new hues match that established
   brightness rather than repainting the page.)
 
+## Refreshing the finance data
+
+Epoch updates the AI-companies CSVs roughly weekly. To refresh:
+
+```
+cd analysis
+curl -sSL -o data/ai_companies_revenue_reports.csv https://epoch.ai/data/ai_companies_revenue_reports.csv
+curl -sSL -o data/ai_companies_funding_rounds.csv  https://epoch.ai/data/ai_companies_funding_rounds.csv
+python3 finance_data.py                # eyeball the new fits (growth, n, R^2)
+python3 finance_data.py --emit-js      # paste over the FIN_RAW/FIN_FITS block in index.html
+python3 finance_data.py --check-html   # must pass
+cd render_test && npm test             # both finance views still render
+```
+
+Things a refresh can surface, and what to do:
+
+- **A new company** → the script exits with an error naming it. Add it to
+  `COMPANY_KEY` in `finance_data.py` and to `COL`/`FIN_NAME`/`FIN_ORDER` in
+  `index.html`; validate any new color (see the finance-chart colors note).
+- **A company crosses n=4** → it gains a trend line automatically. That is the
+  uniform rule working, not something to review away.
+- **Revised history** — Epoch edits old rows, not just appends. The diff of the
+  committed CSVs shows exactly what moved; quote any notable revision in the
+  commit message. Fits can drift on a refresh even with no new reports.
+
 ## Verification
 
 - `python3 gen_model_data.py --check` — M_RAW in index.html matches the YAML.
