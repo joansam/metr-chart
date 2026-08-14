@@ -422,6 +422,7 @@ const FIN_RAW = [
   { c: "openai", s: "rev", d: "2025-12-18", v: 19000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
   { c: "openai", s: "rev", d: "2025-12-31", v: 21400000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
   { c: "openai", s: "rev", d: "2026-02-28", v: 25000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
+  { c: "openai", s: "rev", d: "2026-08-13", v: 40000000000, t: "run rate", cf: "Likely", src: "bloomberg.com" },
   { c: "xai", s: "rev", d: "2024-11-20", v: 100000000, t: "run rate", cf: "Likely", src: "wsj.com" },
   { c: "xai", s: "rev", d: "2025-03-31", v: 172000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
   { c: "xai", s: "rev", d: "2025-06-30", v: 236000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
@@ -469,7 +470,7 @@ const FIN_RAW = [
 ];
 // ln(USD) = b + a*(years since 2024-01-01); OLS per company, n >= 4 points.
 const FIN_FITS = {
-  rev: { anthropic: { a: 2.360964, b: 18.5303, n: 14, r2: 0.983 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.386149, b: 21.0741, n: 15, r2: 0.963 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
+  rev: { anthropic: { a: 2.360964, b: 18.5303, n: 14, r2: 0.983 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.355553, b: 21.0843, n: 16, r2: 0.966 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
   val: { anthropic: { a: 1.337501, b: 23.7067, n: 10, r2: 0.973 }, mistral: { a: 1.608350, b: 21.0731, n: 5, r2: 0.822 }, openai: { a: 0.924117, b: 25.2022, n: 9, r2: 0.955 }, xai: { a: 1.478388, b: 23.3704, n: 5, r2: 0.956 } },
 };
 
@@ -500,12 +501,14 @@ const fmtUSD = v => v >= 1e12 ? `$${+(v/1e12).toFixed(1)}T`
 
 function FinanceChart({ isMobile, vpH }) {
   const [series, setSeries] = useState("rev"); // "rev" | "val"
-  const [tipState, setTipState] = useState({ r: null, cx: 0, cy: 0, opacity: 0 });
+  // Tooltip target: r = a report dot, l = a point on a fitted trend line.
+  const [tipState, setTipState] = useState({ r: null, l: null, cx: 0, cy: 0, opacity: 0 });
   const lastTip = useRef(null);
   const fadeTimer = useRef(null);
   const dotPositions = useRef([]);
+  const scaleRef = useRef(null); // plot scales, captured by FinDots each render
   const chartRef = useRef(null);
-  if (tipState.r) lastTip.current = tipState;
+  if (tipState.r || tipState.l) lastTip.current = tipState;
 
   const pts = useMemo(() =>
     FIN_RAW.filter(r => r.s === series)
@@ -557,29 +560,43 @@ function FinanceChart({ isMobile, vpH }) {
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    let closest = null, best = 18;
+    let next = null, best = 18;
     for (const dp of dotPositions.current) {
       const dist = Math.hypot(dp.cx - mx, dp.cy - my);
-      if (dist < best) { best = dist; closest = dp; }
+      if (dist < best) { best = dist; next = { r: dp.r, cx: dp.cx, cy: dp.cy }; }
     }
-    if (closest) {
+    // No dot nearby: try the trend lines. Five of them share the plot, so the
+    // hit band is deliberately narrow (5px) and dots always win over lines.
+    const sc = scaleRef.current;
+    if (!next && sc && mx >= sc.px0 && mx <= sc.px1 && my >= sc.py0 && my <= sc.py1) {
+      const ts = sc.xS.invert ? sc.xS.invert(mx)
+               : FCS + (mx - sc.px0) / (sc.px1 - sc.px0) * (FCE - FCS);
+      let bestL = 5, hit = null;
+      for (const c of comps) {
+        if (!fits[c] || ts < firstTs[c] || ts > FCE) continue;
+        const d = Math.abs(my - sc.yS(finPred(fits[c])(ts)));
+        if (d < bestL) { bestL = d; hit = { c, ts, v: finPred(fits[c])(ts) }; }
+      }
+      if (hit) next = { l: hit, cx: mx, cy: my };
+    }
+    if (next) {
       clearTimeout(fadeTimer.current);
-      setTipState({ r: closest.r, cx: closest.cx, cy: closest.cy, opacity: 1 });
+      setTipState({ r: null, l: null, ...next, opacity: 1 });
     } else if (tipState.opacity === 1) {
       setTipState(prev => ({ ...prev, opacity: 0 }));
       fadeTimer.current = setTimeout(() => {
-        setTipState(prev => prev.opacity === 0 ? { ...prev, r: null } : prev);
+        setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
       }, 1000);
     }
-  }, [tipState.opacity]);
+  }, [tipState.opacity, comps, fits, firstTs]);
   const onMouseLeave = useCallback(() => {
-    if (tipState.r) {
+    if (tipState.r || tipState.l) {
       setTipState(prev => ({ ...prev, opacity: 0 }));
       fadeTimer.current = setTimeout(() => {
-        setTipState(prev => prev.opacity === 0 ? { ...prev, r: null } : prev);
+        setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
       }, 1000);
     }
-  }, [tipState.r]);
+  }, [tipState.r, tipState.l]);
 
   const FinDots = (props) => {
     const xM = props.xAxisMap, yM = props.yAxisMap;
@@ -589,6 +606,7 @@ function FinanceChart({ isMobile, vpH }) {
     const xr = xS.range(), yr = yS.range();
     const px0 = Math.min(xr[0], xr[1]), px1 = Math.max(xr[0], xr[1]);
     const py0 = Math.min(yr[0], yr[1]), py1 = Math.max(yr[0], yr[1]);
+    scaleRef.current = { xS, yS, px0, px1, py0, py1 }; // for the line-hover hit test
     const positions = [];
     const els = pts.map((r, i) => {
       const cx = xS(r.ts), cy = yS(r.v);
@@ -647,19 +665,37 @@ function FinanceChart({ isMobile, vpH }) {
     </div>
     <div ref={chartRef} style={{position:"relative"}} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
       {lastTip.current && (()=>{
-        const {r,cx,cy}=lastTip.current;
-        const ds=new Date(r.d).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
+        const {r,l,cx,cy}=lastTip.current;
+        const key = (r||l).c;
         const containerW = chartRef.current ? chartRef.current.getBoundingClientRect().width : 900;
         const flipX=cx>containerW*0.6;
-        return (<div style={{position:"absolute",left:flipX?Math.max(4,cx-190):cx+20,top:Math.max(10,cy-40),
-          background:"#1a1a2e",border:"1px solid "+COL[r.c],borderRadius:6,padding:"10px 14px",
+        const box = {position:"absolute",left:flipX?Math.max(4,cx-190):cx+20,top:Math.max(10,cy-40),
+          background:"#1a1a2e",border:"1px solid "+COL[key],borderRadius:6,padding:"10px 14px",
           fontFamily:FONT,fontSize:13,color:"#ccc",lineHeight:1.7,pointerEvents:"none",zIndex:10,
-          minWidth:170,opacity:tipState.opacity,transition:"opacity 1s"}}>
-          <div style={{fontWeight:700,color:COL[r.c],marginBottom:2}}>{FIN_NAME[r.c]}</div>
+          minWidth:170,opacity:tipState.opacity,transition:"opacity 1s"};
+        if (r) {
+          const ds=new Date(r.d).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
+          return (<div style={box}>
+            <div style={{fontWeight:700,color:COL[r.c],marginBottom:2}}>{FIN_NAME[r.c]}</div>
+            <div>{ds}</div>
+            <div>{r.s==="rev"?"Annualized revenue":"Valuation"}: <b style={{color:"#eee"}}>{fmtUSD(r.v)}</b></div>
+            {r.t && <div style={{fontSize:11,color:"#8fa8c8"}}>{r.t}{r.cf?` · ${r.cf.toLowerCase()}`:""}</div>}
+            {r.src && <div style={{fontSize:11,color:"#777"}}>via {r.src}</div>}
+          </div>);
+        }
+        // Trend-line hover: where the fit says this company "should" be at the
+        // cursor's date. The fit can vanish mid-fade on a series switch, so
+        // guard it. Tooltip stays put during the fadeout (no live cursor data),
+        // matching the dot behavior.
+        const lf = FIN_FITS[series][l.c];
+        const ds=new Date(l.ts).toLocaleString("en-US",{month:"short",year:"numeric"});
+        return (<div style={box}>
+          <div style={{fontWeight:700,color:COL[l.c],marginBottom:2}}>{FIN_NAME[l.c]} trend</div>
           <div>{ds}</div>
-          <div>{r.s==="rev"?"Annualized revenue":"Valuation"}: <b style={{color:"#eee"}}>{fmtUSD(r.v)}</b></div>
-          {r.t && <div style={{fontSize:11,color:"#8fa8c8"}}>{r.t}{r.cf?` · ${r.cf.toLowerCase()}`:""}</div>}
-          {r.src && <div style={{fontSize:11,color:"#777"}}>via {r.src}</div>}
+          <div>{series==="rev"?"Trend revenue":"Trend valuation"}: <b style={{color:"#eee"}}>{fmtUSD(l.v)}</b></div>
+          {lf && <div style={{fontSize:11,color:"#8fa8c8"}}>
+            {Math.exp(lf.a).toFixed(1)}×/yr OLS fit (n={lf.n}, R²={lf.r2.toFixed(2)})</div>}
+          {l.ts > TODAY && <div style={{fontSize:11,color:"#777"}}>extrapolated</div>}
         </div>);
       })()}
       <ResponsiveContainer width="100%" height={H}>

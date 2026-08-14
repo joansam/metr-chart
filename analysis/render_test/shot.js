@@ -195,6 +195,37 @@ const LOCAL = {
     await page.mouse.move(finDot.x + 200, finDot.y - 100);
     await page.waitForTimeout(300);
   }
+  // hover the xAI trend LINE itself, 75% along its path (past the last xAI
+  // dot, so the dots-win-over-lines priority can't intercept the hit)
+  const linePt = await page.evaluate(() => {
+    const p = [...document.querySelectorAll('path')].find(el =>
+      (el.getAttribute('stroke') || '').toLowerCase() === '#2fbcd3' &&
+      (el.getAttribute('d') || '').length > 10);
+    if (!p) return null;
+    const pt = p.getPointAtLength(p.getTotalLength() * 0.75);
+    const m = p.getScreenCTM();
+    return { x: m.a*pt.x + m.c*pt.y + m.e, y: m.b*pt.x + m.d*pt.y + m.f };
+  });
+  if (!linePt) failures.push('finance rev: xAI trend path not found for line hover');
+  else {
+    await page.mouse.move(linePt.x, linePt.y);
+    await page.waitForTimeout(600);
+    if (!await page.evaluate(() => document.body.innerText.includes('xAI trend')))
+      failures.push('finance rev: trend-line hover tooltip missing');
+    await page.screenshot({ path: 'chart_fin_line_tip.png' });
+    // 40px above the line is outside the 5px hit band: the tooltip should fade
+    // (it stays in the DOM at opacity 0, like the main chart's, so test the
+    // computed opacity rather than innerText)
+    await page.mouse.move(linePt.x, linePt.y - 40);
+    await page.waitForTimeout(1400);
+    const tipVisible = await page.evaluate(() => {
+      const d = [...document.querySelectorAll('div')].find(el =>
+        el.textContent.startsWith('xAI trend') && el.style.position !== 'absolute');
+      const box = d && d.closest('div[style*="absolute"]');
+      return box ? parseFloat(getComputedStyle(box).opacity) > 0.05 : false;
+    });
+    if (tipVisible) failures.push('finance rev: trend tooltip did not fade off-line');
+  }
   await page.screenshot({ path: 'chart_fin_rev.png' });
   // Valuations view: Mistral is fitted here (n=5) but not in revenue (n=2)
   await page.getByRole('button', { name: 'Valuations' }).click();

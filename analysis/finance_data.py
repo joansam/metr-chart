@@ -21,13 +21,14 @@ Usage:
     python3 finance_data.py            # fit report
     python3 finance_data.py --emit-js  # print the FIN_RAW/FIN_FITS block for index.html
     python3 finance_data.py --check-html   # verify index.html matches this script
+    python3 finance_data.py --ledger   # score due ledger rows, append this vintage's predictions
 """
 import argparse
 import csv
 import math
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -216,12 +217,81 @@ def report(rows, fits):
         print()
 
 
+# ── Validation ledger ────────────────────────────────────────────────────────
+# Out-of-sample scoring (see NOTES.md): each --ledger run appends what the
+# CURRENT fits predict six months out, and scores any past prediction that has
+# come due against the refreshed data. Predicted values are never edited after
+# they are written — only the actual/actual_date fields get filled in.
+LEDGER = HERE / "ledger.csv"
+LEDGER_FIELDS = ["vintage", "series", "entity", "target_date", "predicted",
+                 "unit", "actual", "actual_date", "note"]
+HORIZON_DAYS = 183   # same six-month horizon the chart's trend lines draw
+MATCH_DAYS = 60      # a due prediction scores against the nearest report this close
+
+
+def run_ledger(rows, fits):
+    today = date.today()
+    entries = []
+    if LEDGER.exists():
+        with open(LEDGER, newline="", encoding="utf-8") as f:
+            entries = list(csv.DictReader(f))
+
+    # 1. Score due finance rows: nearest qualifying report within MATCH_DAYS
+    # of the target date. th_* rows are event-based (empty target_date) and
+    # are filled by hand when METR publishes a run.
+    for e in entries:
+        if e["actual"] or not e["target_date"] or e["series"] not in ("rev", "val"):
+            continue
+        target = date.fromisoformat(e["target_date"])
+        if target > today:
+            continue
+        cands = [r for r in rows if r["s"] == e["series"] and r["c"] == e["entity"]
+                 and abs((date.fromisoformat(r["d"]) - target).days) <= MATCH_DAYS]
+        if not cands:
+            print(f"[due, unscored] {e['series']}/{e['entity']} @ {e['target_date']}: "
+                  f"no report within {MATCH_DAYS} days yet")
+            continue
+        hit = min(cands, key=lambda r: abs((date.fromisoformat(r["d"]) - target).days))
+        e["actual"] = f"{hit['v']:.0f}"
+        e["actual_date"] = hit["d"]
+        ratio = hit["v"] / float(e["predicted"])
+        print(f"[scored] {e['series']}/{e['entity']} @ {e['target_date']}: "
+              f"predicted {fmt_usd(float(e['predicted']))}, actual {fmt_usd(hit['v'])} "
+              f"({hit['d']}) — actual/predicted = {ratio:.2f}")
+
+    # 2. Append this vintage's six-month-out predictions (skip duplicates so
+    # re-running on the same day is a no-op).
+    have = {(e["vintage"], e["series"], e["entity"]) for e in entries}
+    target = today + timedelta(days=HORIZON_DAYS)
+    added = 0
+    for s in ("rev", "val"):
+        for c, f in sorted(fits[s].items()):
+            if (today.isoformat(), s, c) in have:
+                continue
+            pred = math.exp(f["b"] + f["a"] * _yr(target.isoformat()))
+            entries.append({
+                "vintage": today.isoformat(), "series": s, "entity": c,
+                "target_date": target.isoformat(), "predicted": f"{pred:.0f}",
+                "unit": "USD", "actual": "", "actual_date": "",
+                "note": f"{math.exp(f['a']):.2f}x/yr fit, n={f['n']}, R2={f['r2']:.3f}",
+            })
+            added += 1
+    with open(LEDGER, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=LEDGER_FIELDS)
+        w.writeheader()
+        w.writerows(entries)
+    print(f"ledger: {added} prediction(s) appended for vintage {today}, "
+          f"{len(entries)} row(s) total")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--emit-js", action="store_true",
                     help="print the FIN_RAW/FIN_FITS block for index.html")
     ap.add_argument("--check-html", action="store_true",
                     help="verify index.html FIN_RAW/FIN_FITS match the CSVs")
+    ap.add_argument("--ledger", action="store_true",
+                    help="score due ledger rows, append this vintage's predictions")
     args = ap.parse_args()
     rows = load_rows()
     fits = fit_series(rows)
@@ -229,6 +299,8 @@ def main():
         print(emit_js(rows, fits))
     elif args.check_html:
         sys.exit(0 if check_html(rows, fits) else 1)
+    elif args.ledger:
+        run_ledger(rows, fits)
     else:
         report(rows, fits)
 

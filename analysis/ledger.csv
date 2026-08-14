@@ -1,0 +1,14 @@
+vintage,series,entity,target_date,predicted,unit,actual,actual_date,note
+2026-06-20,th_p50,Mythos/Fable 5 (launch),,61.3,hours,,,AECI-fit prediction (Barry Jun 20 post); event-based — fill actual when METR publishes a run
+2026-06-20,th_p80,Mythos/Fable 5 (launch),,8.2,hours,,,AECI-fit prediction (Barry Jun 20 post); event-based — fill actual when METR publishes a run
+2026-07-24,th_p50,Opus 5,,71.4,hours,,,AECI-fit prediction (AECI 162.1 from Opus 5 system card); event-based
+2026-07-24,th_p80,Opus 5,,9.5,hours,,,AECI-fit prediction (AECI 162.1 from Opus 5 system card); event-based
+2026-08-14,rev,anthropic,2027-02-13,175818371751,USD,,,"10.60x/yr fit, n=14, R2=0.983"
+2026-08-14,rev,cohere,2027-02-13,1028637674,USD,,,"3.91x/yr fit, n=6, R2=0.991"
+2026-08-14,rev,openai,2027-02-13,98315524252,USD,,,"3.88x/yr fit, n=16, R2=0.966"
+2026-08-14,rev,xai,2027-02-13,3772851108,USD,,,"5.17x/yr fit, n=4, R2=0.984"
+2026-08-14,rev,zai,2027-02-13,274693705,USD,,,"2.25x/yr fit, n=6, R2=0.822"
+2026-08-14,val,anthropic,2027-02-13,1279591968183,USD,,,"3.81x/yr fit, n=10, R2=0.973"
+2026-08-14,val,mistral,2027-02-13,213858145517,USD,,,"4.99x/yr fit, n=5, R2=0.822"
+2026-08-14,val,openai,2027-02-13,1572969001003,USD,,,"2.52x/yr fit, n=9, R2=0.955"
+2026-08-14,val,xai,2027-02-13,1418552925797,USD,,,"4.39x/yr fit, n=5, R2=0.956"

@@ -202,6 +202,29 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   palette on this very dark surface; the new hues match that established
   brightness rather than repainting the page.)
 
+## Validation ledger
+
+`ledger.csv` is the out-of-sample scorecard: what the fits predicted, written
+down *before* the outcome existed, then checked against reality. In-sample R²
+says nothing about the predictions this project exists to make; special-casing
+inflates it. The ledger is the counterweight — predicted values are append-only
+and never edited, only their `actual`/`actual_date` fields get filled.
+
+- Finance rows are automated: `python3 finance_data.py --ledger` (run it after
+  a data refresh) appends the current fits' six-month-out revenue/valuation
+  predictions for every fitted company, and scores any past prediction that
+  has come due against the nearest report within ±60 days. Re-running on the
+  same day is a no-op.
+- `th_*` rows are event-based (empty `target_date`): fill `actual` by hand
+  when METR publishes a run of that model. Seeded with the two AECI-fit
+  predictions from the open-items list.
+
+First observation for calibration (Aug 14 2026): the pre-refresh OpenAI
+revenue fit (4.00x/yr, data through Feb 2026) implied ~$53B for Aug 13 2026;
+Bloomberg reported "more than $40B" that day, so the trend overshot by ~30%
+over a six-month horizon (or less, if 40B is a real underestimate). The
+refreshed fit softened to 3.88x/yr.
+
 ## Refreshing the finance data
 
 Epoch updates the AI-companies CSVs roughly weekly. To refresh:
@@ -213,6 +236,7 @@ curl -sSL -o data/ai_companies_funding_rounds.csv  https://epoch.ai/data/ai_comp
 python3 finance_data.py                # eyeball the new fits (growth, n, R^2)
 python3 finance_data.py --emit-js      # paste over the FIN_RAW/FIN_FITS block in index.html
 python3 finance_data.py --check-html   # must pass
+python3 finance_data.py --ledger       # score due predictions, log this vintage's
 cd render_test && npm test             # both finance views still render
 ```
 
@@ -262,10 +286,11 @@ plain fetchers on
 - CLI sensitivity switches (`--drop-reward-hacked`, `--with-gpt35`) affect
   the report only, not the generated chart arrays (which always use the
   default fits).
-- A validation ledger: record predictions per data vintage, score them as
-  METR publishes actuals (first real test: a METR run of launch-version
-  Mythos/Fable 5 vs the 61.3h/8.2h AECI-fit prediction, then Opus 5 vs
-  71.4h/9.5h).
+- ~~A validation ledger~~ — exists now: `ledger.csv` + `finance_data.py
+  --ledger` (see "Validation ledger" above). The capability-side entries
+  (Mythos/Fable 5 at 61.3h/8.2h, Opus 5 at 71.4h/9.5h) are seeded as
+  event-based rows; extending `--ledger`-style automation to
+  `eci_conversions.py` is still open.
 - Opus 5's Epoch ECI landed on Aug 2 2026 (161.05, dated 2026-07-24) and
   replaced the imputed 164.2. It is the first prediction-only row with BOTH
   indices measured, so it joins the ECI<->AECI basis (n=10 -> 11) and pulled
