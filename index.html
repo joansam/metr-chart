@@ -671,6 +671,12 @@ function FinanceChart({ isMobile, vpH }) {
            .map(r => ({ ...r, ts: new Date(r.d).getTime() })), [series]);
   const fits = FIN_FITS[series];
   const comps = useMemo(() => FIN_ORDER.filter(c => pts.some(r => r.c === c)), [pts]);
+  // Legend-toggled companies. DISPLAY ONLY: hiding one rescales the axes to
+  // what's shown but never refits or reshapes anyone's trend. The set is
+  // shared across the Revenue/Valuations views (same entity, same choice).
+  const [hidden, setHidden] = useState(() => new Set());
+  const visPts = useMemo(() => pts.filter(r => !hidden.has(r.c)), [pts, hidden]);
+  const visComps = useMemo(() => comps.filter(c => !hidden.has(c)), [comps, hidden]);
   // A trend line spans [company's first report, FCE] — extrapolation is capped
   // by the same six-month horizon for everyone.
   const firstTs = useMemo(() => {
@@ -682,22 +688,23 @@ function FinanceChart({ isMobile, vpH }) {
     const d = [], step = 7 * DAY_MS;
     for (let t = FCS; t <= FCE; t += step) {
       const row = { ts: t };
-      for (const c of comps)
+      for (const c of visComps)
         row[c] = (fits[c] && t >= firstTs[c]) ? finPred(fits[c])(t) : null;
       d.push(row);
     }
     return d;
-  }, [comps, fits, firstTs]);
+  }, [visComps, fits, firstTs]);
 
   const [yLo, yHi] = useMemo(() => {
     let lo = Infinity, hi = -Infinity;
-    for (const r of pts) { if (r.v < lo) lo = r.v; if (r.v > hi) hi = r.v; }
-    for (const d of trendData) for (const c of comps)
+    for (const r of visPts) { if (r.v < lo) lo = r.v; if (r.v > hi) hi = r.v; }
+    for (const d of trendData) for (const c of visComps)
       if (d[c] != null && d[c] > hi) hi = d[c];
+    if (!isFinite(lo)) return [1e8, 1e12]; // every company toggled off
     const floor = [...FIN_NICE].reverse().find(t => t <= lo) ?? FIN_NICE[0];
     const ceil = FIN_NICE.find(t => t >= hi * 1.04) ?? FIN_NICE[FIN_NICE.length - 1];
     return [floor, ceil];
-  }, [pts, trendData, comps]);
+  }, [visPts, trendData, visComps]);
 
   const xTicks = useMemo(() => {
     const t = [];
@@ -737,7 +744,7 @@ function FinanceChart({ isMobile, vpH }) {
       const ts = sc.xS.invert ? sc.xS.invert(mx)
                : FCS + (mx - sc.px0) / (sc.px1 - sc.px0) * (FCE - FCS);
       let bestL = 5, hit = null;
-      for (const c of comps) {
+      for (const c of visComps) {
         if (!fits[c] || ts < firstTs[c] || ts > FCE) continue;
         const d = Math.abs(my - sc.yS(finPred(fits[c])(ts)));
         if (d < bestL) { bestL = d; hit = { c, ts, v: finPred(fits[c])(ts) }; }
@@ -753,7 +760,7 @@ function FinanceChart({ isMobile, vpH }) {
         setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
       }, 1000);
     }
-  }, [tipState.opacity, comps, fits, firstTs]);
+  }, [tipState.opacity, visComps, fits, firstTs]);
   const onMouseLeave = useCallback(() => {
     if (tipState.r || tipState.l) {
       setTipState(prev => ({ ...prev, opacity: 0 }));
@@ -773,7 +780,7 @@ function FinanceChart({ isMobile, vpH }) {
     const py0 = Math.min(yr[0], yr[1]), py1 = Math.max(yr[0], yr[1]);
     scaleRef.current = { xS, yS, px0, px1, py0, py1 }; // for the line-hover hit test
     const positions = [];
-    const els = pts.map((r, i) => {
+    const els = visPts.map((r, i) => {
       const cx = xS(r.ts), cy = yS(r.v);
       if (isNaN(cx) || isNaN(cy)) return null;
       if (cx >= px0 && cx <= px1 && cy >= py0 && cy <= py1) positions.push({ r, cx, cy });
@@ -790,7 +797,7 @@ function FinanceChart({ isMobile, vpH }) {
     // within a text height of each other (OpenAI and Anthropic valuations end
     // ~8px apart).
     const xEnd = Math.min(FCE, zoom.x1);
-    const labels = isMobile ? [] : comps.filter(c => fits[c] && firstTs[c] <= zoom.x1).map(c => ({
+    const labels = isMobile ? [] : visComps.filter(c => fits[c] && firstTs[c] <= zoom.x1).map(c => ({
       c, y: yS(finPred(fits[c])(xEnd)),
     })).filter(l => !isNaN(l.y) && l.y >= py0 - 6 && l.y <= py1 + 6)
       .sort((a, b) => a.y - b.y);
@@ -877,7 +884,7 @@ function FinanceChart({ isMobile, vpH }) {
             stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>
           <ReferenceLine x={TODAY} stroke="#f0c050" strokeDasharray="4 4" strokeWidth={1}
             label={{value:"Today",position:"top",fill:"#f0c050",fontSize:11,fontFamily:FONT_D}}/>
-          {comps.map(c => fits[c] && <Line key={c} dataKey={c} stroke={COL[c]} strokeWidth={2}
+          {visComps.map(c => fits[c] && <Line key={c} dataKey={c} stroke={COL[c]} strokeWidth={2}
             strokeDasharray="8 4" dot={false} isAnimationActive={false}/>)}
           <Customized component={FinDots}/>
         </ComposedChart>
@@ -887,14 +894,20 @@ function FinanceChart({ isMobile, vpH }) {
         fontSize:11,fontFamily:FONT_D,cursor:"pointer",zIndex:5}}>Reset zoom</button>}
     </div>
     <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
-      {comps.map(c => (
-        <div key={c} style={{display:"flex",alignItems:"center",gap:5}}>
-          <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={COL[c]}/></svg>
-          {FIN_NAME[c]}
+      {comps.map(c => { const off = hidden.has(c); return (
+        <div key={c} onClick={()=>{
+            setHidden(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
+            resetZoom(); // hiding a giant rescales the axes; stale zoom would mislead
+          }}
+          style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",userSelect:"none",
+            opacity:off?0.45:1,transition:"opacity 0.15s"}}>
+          <svg width={10} height={10}><circle cx={5} cy={5} r={3.5}
+            fill={off?"#12121f":COL[c]} stroke={COL[c]} strokeWidth={1.2}/></svg>
+          <span>{FIN_NAME[c]}</span>
           {fits[c] && <span style={{color:"#777"}}>
             {growthLabel(c)} (n={fits[c].n}, R²={fits[c].r2.toFixed(2)})</span>}
         </div>
-      ))}
+      );})}
     </div>
     <p style={{fontSize:12,color:"#666",marginTop:12,lineHeight:1.5,maxWidth:PROSE_W}}>
       Log-scale Y-axis (USD). {series === "rev"
@@ -906,8 +919,10 @@ valuation counts, primary and secondary alike. A valuation only moves when a \
 round closes, so dots are pricing events, not a continuous series."}{" "}
       Dashed lines are unweighted OLS fits of ln($) on time for companies with
       ≥4 qualifying points, extended six months past today; the rest plot as
-      dots only. These are reported figures at irregular intervals — the trends
-      measure growth in what gets reported. Data:{" "}
+      dots only. Legend chips toggle companies in and out of the display —
+      hiding one rescales the axes but never refits any trend. These are
+      reported figures at irregular intervals — the trends measure growth in
+      what gets reported. Data:{" "}
       <a href="https://epoch.ai/data/ai-companies" style={{color:"#7eb8da",textDecoration:"none"}}
         target="_blank" rel="noopener noreferrer">Epoch AI, AI Companies Hub</a> (CC-BY 4.0),
       snapshot in <code style={{fontSize:11}}>analysis/data/</code>.

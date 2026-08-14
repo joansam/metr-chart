@@ -256,6 +256,26 @@ const LOCAL = {
     }
   }
 
+  // legend chip toggle: hiding Anthropic removes exactly its trend path (the
+  // top chart draws no #d97757 <path> strokes except prediction diamonds,
+  // which stay — hence count-based assertions, not zero-checks)
+  const anthPaths = () => page.evaluate(() =>
+    [...document.querySelectorAll('path')].filter(p =>
+      (p.getAttribute('stroke') || '').toLowerCase() === '#d97757' &&
+      (p.getAttribute('d') || '').length > 10).length);
+  const anthChip = page.getByText('Anthropic', { exact: true }).last(); // finance legend
+  const nBefore = await anthPaths();
+  await anthChip.click();
+  await page.waitForTimeout(600);
+  const nHidden = await anthPaths();
+  if (nHidden !== nBefore - 1)
+    failures.push(`finance toggle: expected ${nBefore - 1} anthropic paths, got ${nHidden}`);
+  await page.screenshot({ path: 'chart_fin_toggle.png' });
+  await anthChip.click();
+  await page.waitForTimeout(600);
+  if (await anthPaths() !== nBefore)
+    failures.push('finance toggle: Anthropic did not restore');
+
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');
   if (errors.length || failures.length) process.exitCode = 1;

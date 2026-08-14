@@ -193,6 +193,9 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Two readings to keep honest about: these are *reported* figures at irregular
   intervals, so the fits measure growth in what gets reported; and Anthropic's
   10.6x/yr revenue slope is real in the data but leans on a tiny 2023 base.
+  The legend chips toggle companies in/out of the display (useful because the
+  giants compress everyone else on the log axis) — display only: hiding a
+  company rescales the axes but never refits any trend.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold now also
   covers MiniMax). New hues — xAI #2fbcd3, Mistral #e069a8, Cohere #8f7bf0 —
