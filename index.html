@@ -499,6 +499,162 @@ const fmtUSD = v => v >= 1e12 ? `$${+(v/1e12).toFixed(1)}T`
                   : v >= 1e9  ? `$${+(v/1e9).toFixed(1)}B`
                   : `$${+(v/1e6).toFixed(0)}M`;
 
+// ── Shared wheel/pinch/drag zoom-pan, used by both charts. ──
+// Domains: x in ms; y in the ACTIVE AXIS'S OWN UNITS (ln-hours for the TH
+// view, score points for ECI/AECI, ln-USD for the finance chart). ly0/ly1 =
+// null means "auto" — the y-axis tracks its computed bounds until the user
+// explicitly zooms/pans. Zoom factors anchor on the cursor/pinch midpoint;
+// both pans are incremental (the desktop one used to re-derive from a
+// mousedown snapshot — same arithmetic, one code path now).
+function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }) {
+  const ZOOM_FACTOR = 0.15;
+  const [zoom, setZoom] = useState({ x0: xMin, x1: xMax, ly0: null, ly1: null });
+  const isZoomed = zoom.x0 !== xMin || zoom.x1 !== xMax || zoom.ly0 !== null || zoom.ly1 !== null;
+  const resetZoom = useCallback(() => setZoom({ x0: xMin, x1: xMax, ly0: null, ly1: null }), [xMin, xMax]);
+
+  const plotBounds = useCallback(rect => ({
+    left: margin.left + yAxisW, right: rect.width - margin.right,
+    top: margin.top, bottom: height - margin.bottom,
+  }), [margin, yAxisW, height]);
+
+  // factor > 1 zooms out, < 1 zooms in; (mx, my) is the anchor in container px.
+  const applyZoom = useCallback((factor, mx, my) => {
+    const el = chartRef.current;
+    if (!el) return;
+    const b = plotBounds(el.getBoundingClientRect());
+    const fx = Math.max(0, Math.min(1, (mx - b.left) / (b.right - b.left)));
+    const fy = Math.max(0, Math.min(1, (my - b.top) / (b.bottom - b.top))); // 0=top, 1=bottom
+    setZoom(prev => {
+      const xSpan = prev.x1 - prev.x0;
+      const newXSpan = xSpan * factor;
+      let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
+      let nx1 = nx0 + newXSpan;
+      if (nx0 < xMin) { nx0 = xMin; nx1 = Math.min(xMax, nx0 + newXSpan); }
+      if (nx1 > xMax) { nx1 = xMax; nx0 = Math.max(xMin, nx1 - newXSpan); }
+      if (nx1 - nx0 >= xMax - xMin) { nx0 = xMin; nx1 = xMax; }
+      // fy=1 (bottom) anchors near ly0, fy=0 (top) near ly1
+      const ply0 = prev.ly0 ?? yMin, ply1 = prev.ly1 ?? yMax;
+      const lySpan = ply1 - ply0;
+      const newLySpan = lySpan * factor;
+      let nly0 = ply0 - (newLySpan - lySpan) * (1 - fy);
+      let nly1 = nly0 + newLySpan;
+      if (nly0 < yMin) { nly0 = yMin; nly1 = Math.min(yMax, nly0 + newLySpan); }
+      if (nly1 > yMax) { nly1 = yMax; nly0 = Math.max(yMin, nly1 - newLySpan); }
+      if (nly1 - nly0 >= yMax - yMin) { nly0 = yMin; nly1 = yMax; }
+      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
+    });
+  }, [chartRef, plotBounds, xMin, xMax, yMin, yMax]);
+
+  // Grab-style pan: dragging down moves the view to higher values.
+  const applyPan = useCallback((dx, dy) => {
+    const el = chartRef.current;
+    if (!el) return;
+    const b = plotBounds(el.getBoundingClientRect());
+    const plotW = b.right - b.left, plotH = b.bottom - b.top;
+    setZoom(prev => {
+      const xSpan = prev.x1 - prev.x0;
+      const xShift = -(dx / plotW) * xSpan;
+      let nx0 = prev.x0 + xShift, nx1 = prev.x1 + xShift;
+      if (nx0 < xMin) { nx0 = xMin; nx1 = nx0 + xSpan; }
+      if (nx1 > xMax) { nx1 = xMax; nx0 = nx1 - xSpan; }
+      const ply0 = prev.ly0 ?? yMin, ply1 = prev.ly1 ?? yMax;
+      const lySpan = ply1 - ply0;
+      const lyShift = (dy / plotH) * lySpan;
+      let nly0 = ply0 + lyShift, nly1 = ply1 + lyShift;
+      if (nly0 < yMin) { nly0 = yMin; nly1 = nly0 + lySpan; }
+      if (nly1 > yMax) { nly1 = yMax; nly0 = nly1 - lySpan; }
+      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
+    });
+  }, [chartRef, plotBounds, xMin, xMax, yMin, yMax]);
+
+  // Wheel zoom (passive:false so preventDefault stops the page scrolling).
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const onWheel = e => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      applyZoom(e.deltaY > 0 ? 1 + ZOOM_FACTOR : 1 / (1 + ZOOM_FACTOR),
+                e.clientX - rect.left, e.clientY - rect.top);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [applyZoom, chartRef]);
+
+  // Desktop drag-pan (window listeners so dragging outside the chart works).
+  const isPanning = useRef(false);
+  const panLast = useRef({ x: 0, y: 0 });
+  const onPanStart = useCallback((e) => {
+    if (!isZoomed) return;
+    isPanning.current = true;
+    panLast.current = { x: e.clientX, y: e.clientY };
+    e.preventDefault();
+  }, [isZoomed]);
+  useEffect(() => {
+    const onMove = e => {
+      if (!isPanning.current) return;
+      applyPan(e.clientX - panLast.current.x, e.clientY - panLast.current.y);
+      panLast.current = { x: e.clientX, y: e.clientY };
+    };
+    const onUp = () => { isPanning.current = false; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [applyPan]);
+
+  // Touch: two-finger pinch zoom; single-finger pan once zoomed.
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const pinch = { dist: null };
+    const touchPt = e => {
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const rect = el.getBoundingClientRect();
+      return { dist: Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY),
+               cx: (t0.clientX + t1.clientX) / 2 - rect.left,
+               cy: (t0.clientY + t1.clientY) / 2 - rect.top };
+    };
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        isPanning.current = false;
+        pinch.dist = touchPt(e).dist;
+      } else if (e.touches.length === 1 && isZoomed) {
+        isPanning.current = true;
+        panLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    };
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && pinch.dist != null) {
+        e.preventDefault();
+        isPanning.current = false;
+        const p = touchPt(e);
+        applyZoom(pinch.dist / p.dist, p.cx, p.cy); // pinch in = zoom out
+        pinch.dist = p.dist;
+      } else if (e.touches.length === 1 && isPanning.current && isZoomed) {
+        e.preventDefault();
+        const t = e.touches[0];
+        applyPan(t.clientX - panLast.current.x, t.clientY - panLast.current.y);
+        panLast.current = { x: t.clientX, y: t.clientY };
+      }
+    };
+    const onTouchEnd = () => { pinch.dist = null; isPanning.current = false; };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [applyZoom, applyPan, isZoomed, chartRef]);
+
+  return { zoom, isZoomed, resetZoom, onPanStart, isPanning };
+}
+
 function FinanceChart({ isMobile, vpH }) {
   const [series, setSeries] = useState("rev"); // "rev" | "val"
   // Tooltip target: r = a report dot, l = a point on a fitted trend line.
@@ -555,7 +711,16 @@ function FinanceChart({ isMobile, vpH }) {
   const YAXIS_W = isMobile ? 44 : 62;
   const H = isMobile ? 320 : clamp(380, Math.round(vpH * 0.45), 560);
 
+  // Same zoom/pan as the capability chart; y zoom state lives in ln(USD).
+  const { zoom, isZoomed, resetZoom, onPanStart, isPanning } = useZoomPan({
+    chartRef, xMin: FCS, xMax: FCE, yMin: Math.log(yLo), yMax: Math.log(yHi),
+    margin: CHART_MARGIN, yAxisW: YAXIS_W, height: H,
+  });
+  const xDomain = [zoom.x0, zoom.x1];
+  const yDomain = [Math.exp(zoom.ly0 ?? Math.log(yLo)), Math.exp(zoom.ly1 ?? Math.log(yHi))];
+
   const onMouseMove = useCallback((e) => {
+    if (isPanning.current) return;
     const el = chartRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -620,11 +785,13 @@ function FinanceChart({ isMobile, vpH }) {
       </g>);
     });
     dotPositions.current = positions;
-    // Company labels at each fitted line's right end, nudged apart when two
-    // trends land within a text height of each other (OpenAI and Anthropic
-    // valuations end ~8px apart).
-    const labels = isMobile ? [] : comps.filter(c => fits[c]).map(c => ({
-      c, y: yS(finPred(fits[c])(FCE)),
+    // Company labels at each fitted line's right end — the VISIBLE right end,
+    // so they track the line when zoomed — nudged apart when two trends land
+    // within a text height of each other (OpenAI and Anthropic valuations end
+    // ~8px apart).
+    const xEnd = Math.min(FCE, zoom.x1);
+    const labels = isMobile ? [] : comps.filter(c => fits[c] && firstTs[c] <= zoom.x1).map(c => ({
+      c, y: yS(finPred(fits[c])(xEnd)),
     })).filter(l => !isNaN(l.y) && l.y >= py0 - 6 && l.y <= py1 + 6)
       .sort((a, b) => a.y - b.y);
     for (let i = 1; i < labels.length; i++)
@@ -656,14 +823,15 @@ function FinanceChart({ isMobile, vpH }) {
     </p>
     <div style={{display:"flex",gap:0,marginBottom:10,fontFamily:FONT_D,fontSize:12}}>
       {[["rev","Revenue"],["val","Valuations"]].map(([s,lb],i)=>(
-        <button key={s} onClick={()=>setSeries(s)} style={{
+        <button key={s} onClick={()=>{setSeries(s);resetZoom();}} style={{
           background:series===s?"#2a2a40":"transparent",color:series===s?"#eee":"#777",
           border:"1px solid #444",borderLeft:i===0?"1px solid #444":"none",
           borderRadius:i===0?"6px 0 0 6px":"0 6px 6px 0",
           padding:"5px 14px",cursor:"pointer",fontFamily:FONT_D,fontSize:12}}>{lb}</button>
       ))}
     </div>
-    <div ref={chartRef} style={{position:"relative"}} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
+    <div ref={chartRef} style={{position:"relative",cursor:isZoomed?"grab":"default"}}
+      onMouseDown={onPanStart} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
       {lastTip.current && (()=>{
         const {r,l,cx,cy}=lastTip.current;
         const key = (r||l).c;
@@ -701,11 +869,11 @@ function FinanceChart({ isMobile, vpH }) {
       <ResponsiveContainer width="100%" height={H}>
         <ComposedChart data={trendData} margin={CHART_MARGIN}>
           <CartesianGrid stroke="#2a2a40" strokeDasharray="3 3"/>
-          <XAxis dataKey="ts" type="number" domain={[FCS, FCE]} ticks={xTicks}
+          <XAxis dataKey="ts" type="number" domain={xDomain} ticks={xTicks.filter(t=>t>=zoom.x0&&t<=zoom.x1)}
             tickFormatter={ts=>`${new Date(ts).getFullYear()}`}
             stroke="#666" tick={{fontSize:isMobile?10:12,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} allowDataOverflow/>
-          <YAxis scale="log" domain={[yLo, yHi]} allowDataOverflow
-            ticks={FIN_YTICKS.filter(t=>t>=yLo&&t<=yHi)} tickFormatter={fmtUSD}
+          <YAxis scale="log" domain={yDomain} allowDataOverflow
+            ticks={FIN_YTICKS.filter(t=>t>=yDomain[0]&&t<=yDomain[1])} tickFormatter={fmtUSD}
             stroke="#666" tick={{fontSize:isMobile?9:11,fontFamily:FONT,fill:"#999"}} axisLine={{stroke:"#444"}} width={YAXIS_W}/>
           <ReferenceLine x={TODAY} stroke="#f0c050" strokeDasharray="4 4" strokeWidth={1}
             label={{value:"Today",position:"top",fill:"#f0c050",fontSize:11,fontFamily:FONT_D}}/>
@@ -714,6 +882,9 @@ function FinanceChart({ isMobile, vpH }) {
           <Customized component={FinDots}/>
         </ComposedChart>
       </ResponsiveContainer>
+      {isZoomed && <button onClick={resetZoom} style={{position:"absolute",top:isMobile?8:28,right:isMobile?20:96,
+        background:"#2a2a40",color:"#ccc",border:"1px solid #555",borderRadius:4,padding:"4px 10px",
+        fontSize:11,fontFamily:FONT_D,cursor:"pointer",zIndex:5}}>Reset zoom</button>}
     </div>
     <div style={{display:"flex",flexWrap:"wrap",gap:16,marginTop:12,fontSize:13,color:"#999"}}>
       {comps.map(c => (
@@ -996,11 +1167,6 @@ function App() {
   const yUnitBot = isScore ? scoreDomain[0] : yLogBot;
   const yUnitTop = isScore ? scoreDomain[1] : yLogTop;
 
-  // ── Zoom state ──
-  // Store domains: x in ms, y in log-space (ln(hours)). ly0/ly1 = null means
-  // "auto" — the y-axis tracks yhiDyn until the user explicitly zooms/pans it.
-  const [zoom, setZoom] = useState({ x0: CS, x1: CE, ly0: null, ly1: null });
-  const isZoomed = zoom.x0 !== CS || zoom.x1 !== CE || zoom.ly0 !== null || zoom.ly1 !== null;
   const CHART_MARGIN = isMobile ? { top: 10, right: 16, left: 2, bottom: 30 } : { top: 20, right: 90, left: 15, bottom: 40 };
   const YAXIS_W = isMobile ? 44 : 62;
   // Responsive sizing. Height is a fixed share of the viewport (5/8) rather than
@@ -1017,216 +1183,10 @@ function App() {
   const PLOT_H = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
   const SHELL_W = isMobile ? "100%"
     : clamp(900, Math.min(vp.w - 48, PLOT_H * 2.0 + NON_PLOT_W), 1600);
-  const ZOOM_FACTOR = 0.15;
-
-  const onWheel = useCallback((e) => {
-    e.preventDefault();
-    const container = chartRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    // Chart plot area pixel bounds
-    const plotLeft = CHART_MARGIN.left + YAXIS_W;
-    const plotRight = rect.width - CHART_MARGIN.right;
-    const plotTop = CHART_MARGIN.top;
-    const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom;
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    // Fraction of cursor within plot area
-    const fx = Math.max(0, Math.min(1, (mx - plotLeft) / (plotRight - plotLeft)));
-    const fy = Math.max(0, Math.min(1, (my - plotTop) / (plotBottom - plotTop))); // 0=top, 1=bottom
-    const dir = e.deltaY > 0 ? 1 : -1; // 1=zoom out, -1=zoom in
-    const factor = dir > 0 ? 1 + ZOOM_FACTOR : 1 / (1 + ZOOM_FACTOR);
-    setZoom(prev => {
-      const xSpan = prev.x1 - prev.x0;
-      const newXSpan = xSpan * factor;
-      let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
-      let nx1 = nx0 + newXSpan;
-      // Clamp to max extent
-      if (nx0 < CS) { nx0 = CS; nx1 = Math.min(CE, nx0 + newXSpan); }
-      if (nx1 > CE) { nx1 = CE; nx0 = Math.max(CS, nx1 - newXSpan); }
-      if (nx1 - nx0 >= CE - CS) { nx0 = CS; nx1 = CE; }
-      // Y in log-space: fy=0 is top (high values=ly1), fy=1 is bottom (low values=ly0)
-      const ply0 = prev.ly0 ?? yUnitBot, ply1 = prev.ly1 ?? yUnitTop;
-      const lySpan = ply1 - ply0;
-      const newLySpan = lySpan * factor;
-      // fy=1 (bottom) should anchor near ly0, fy=0 (top) should anchor near ly1
-      let nly0 = ply0 - (newLySpan - lySpan) * (1 - fy);
-      let nly1 = nly0 + newLySpan;
-      const LY_MIN = yUnitBot, LY_MAX = yUnitTop;
-      if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = Math.min(LY_MAX, nly0 + newLySpan); }
-      if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = Math.max(LY_MIN, nly1 - newLySpan); }
-      if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
-      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
-    });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yUnitBot, yUnitTop]);
-
-  // Attach wheel listener with passive:false to allow preventDefault
-  useEffect(() => {
-    const el = chartRef.current;
-    if (!el) return;
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [onWheel]);
-
-  // ── Pinch-to-zoom for touch devices ──
-  const pinchRef = useRef(null); // { dist, cx, cy }
-  const applyPinchZoom = useCallback((factor, cx, cy) => {
-    const container = chartRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const plotLeft = CHART_MARGIN.left + YAXIS_W;
-    const plotRight = rect.width - CHART_MARGIN.right;
-    const plotTop = CHART_MARGIN.top;
-    const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom;
-    const fx = Math.max(0, Math.min(1, (cx - plotLeft) / (plotRight - plotLeft)));
-    const fy = Math.max(0, Math.min(1, (cy - plotTop) / (plotBottom - plotTop)));
-    setZoom(prev => {
-      const xSpan = prev.x1 - prev.x0;
-      const newXSpan = xSpan * factor;
-      let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
-      let nx1 = nx0 + newXSpan;
-      if (nx0 < CS) { nx0 = CS; nx1 = Math.min(CE, nx0 + newXSpan); }
-      if (nx1 > CE) { nx1 = CE; nx0 = Math.max(CS, nx1 - newXSpan); }
-      if (nx1 - nx0 >= CE - CS) { nx0 = CS; nx1 = CE; }
-      const ply0 = prev.ly0 ?? yUnitBot, ply1 = prev.ly1 ?? yUnitTop;
-      const lySpan = ply1 - ply0;
-      const newLySpan = lySpan * factor;
-      let nly0 = ply0 - (newLySpan - lySpan) * (1 - fy);
-      let nly1 = nly0 + newLySpan;
-      const LY_MIN = yUnitBot, LY_MAX = yUnitTop;
-      if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = Math.min(LY_MAX, nly0 + newLySpan); }
-      if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = Math.max(LY_MIN, nly1 - newLySpan); }
-      if (nly1 - nly0 >= LY_MAX - LY_MIN) { nly0 = LY_MIN; nly1 = LY_MAX; }
-      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
-    });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yUnitBot, yUnitTop]);
-
-  // ── Single-finger pan when zoomed ──
-  const panRef = useRef(null); // { x, y } last touch position in client coords
-  const applyPan = useCallback((dx, dy) => {
-    const container = chartRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const plotW = rect.width - CHART_MARGIN.left - YAXIS_W - CHART_MARGIN.right;
-    const plotH = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
-    setZoom(prev => {
-      // X pan: pixels to domain units
-      const xSpan = prev.x1 - prev.x0;
-      const xShift = -(dx / plotW) * xSpan;
-      let nx0 = prev.x0 + xShift, nx1 = prev.x1 + xShift;
-      if (nx0 < CS) { nx0 = CS; nx1 = nx0 + xSpan; }
-      if (nx1 > CE) { nx1 = CE; nx0 = nx1 - xSpan; }
-      // Y pan: grab-style, mirrors desktop onPanMove (resolves null "auto" bounds)
-      const ply0 = prev.ly0 ?? yUnitBot, ply1 = prev.ly1 ?? yUnitTop;
-      const lySpan = ply1 - ply0;
-      const lyShift = (dy / plotH) * lySpan;
-      const LY_MIN = yUnitBot, LY_MAX = yUnitTop;
-      let nly0 = ply0 + lyShift, nly1 = ply1 + lyShift;
-      if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = nly0 + lySpan; }
-      if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = nly1 - lySpan; }
-      return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
-    });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yUnitBot, yUnitTop]);
-
-  useEffect(() => {
-    const el = chartRef.current;
-    if (!el) return;
-    const onTouchStart = (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        panRef.current = null; // cancel any pan when pinching
-        const t0 = e.touches[0], t1 = e.touches[1];
-        const rect = el.getBoundingClientRect();
-        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-        const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
-        const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
-        pinchRef.current = { dist, cx, cy };
-      } else if (e.touches.length === 1 && isZoomed) {
-        panRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
-    };
-    const onTouchMove = (e) => {
-      if (e.touches.length === 2 && pinchRef.current) {
-        e.preventDefault();
-        panRef.current = null;
-        const t0 = e.touches[0], t1 = e.touches[1];
-        const rect = el.getBoundingClientRect();
-        const newDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-        const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
-        const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
-        const scale = pinchRef.current.dist / newDist; // >1 = pinch in (zoom out), <1 = pinch out (zoom in)
-        applyPinchZoom(scale, cx, cy);
-        pinchRef.current = { dist: newDist, cx, cy };
-      } else if (e.touches.length === 1 && panRef.current && isZoomed) {
-        e.preventDefault();
-        const t = e.touches[0];
-        const dx = t.clientX - panRef.current.x;
-        const dy = t.clientY - panRef.current.y;
-        applyPan(dx, dy);
-        panRef.current = { x: t.clientX, y: t.clientY };
-      }
-    };
-    const onTouchEnd = () => { pinchRef.current = null; panRef.current = null; };
-    el.addEventListener("touchstart", onTouchStart, { passive: false });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd);
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [applyPinchZoom, applyPan, isZoomed]);
-
-  const resetZoom = useCallback(() => setZoom({ x0: CS, x1: CE, ly0: null, ly1: null }), []);
-
-  // ── Pan state ──
-  const isPanning = useRef(false);
-  const panStart = useRef({ mx: 0, my: 0, zoom: null });
-
-  const onPanStart = useCallback((e) => {
-    if (!isZoomed) return;
-    isPanning.current = true;
-    panStart.current = { mx: e.clientX, my: e.clientY, zoom: { ...zoom } };
-    e.preventDefault();
-  }, [isZoomed, zoom]);
-
-  const onPanMove = useCallback((e) => {
-    if (!isPanning.current) return;
-    const container = chartRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const plotW = rect.width - CHART_MARGIN.left - YAXIS_W - CHART_MARGIN.right;
-    const plotH = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
-    const dx = e.clientX - panStart.current.mx;
-    const dy = e.clientY - panStart.current.my;
-    const prev = panStart.current.zoom;
-    // X pan: pixels to domain units
-    const xSpan = prev.x1 - prev.x0;
-    const xShift = -(dx / plotW) * xSpan;
-    let nx0 = prev.x0 + xShift, nx1 = prev.x1 + xShift;
-    if (nx0 < CS) { nx0 = CS; nx1 = nx0 + xSpan; }
-    if (nx1 > CE) { nx1 = CE; nx0 = nx1 - xSpan; }
-    // Y pan: grab-style — dragging down moves content down (view shifts to higher values)
-    const ply0 = prev.ly0 ?? yUnitBot, ply1 = prev.ly1 ?? yUnitTop;
-    const lySpan = ply1 - ply0;
-    const lyShift = (dy / plotH) * lySpan;
-    const LY_MIN = yUnitBot, LY_MAX = yUnitTop;
-    let nly0 = ply0 + lyShift, nly1 = ply1 + lyShift;
-    if (nly0 < LY_MIN) { nly0 = LY_MIN; nly1 = nly0 + lySpan; }
-    if (nly1 > LY_MAX) { nly1 = LY_MAX; nly0 = nly1 - lySpan; }
-    setZoom({ x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 });
-  }, [CHART_MARGIN, YAXIS_W, CHART_HEIGHT, yUnitBot, yUnitTop]);
-
-  const onPanEnd = useCallback(() => { isPanning.current = false; }, []);
-
-  useEffect(() => {
-    // Attach move/up to window so dragging outside chart still works
-    window.addEventListener("mousemove", onPanMove);
-    window.addEventListener("mouseup", onPanEnd);
-    return () => {
-      window.removeEventListener("mousemove", onPanMove);
-      window.removeEventListener("mouseup", onPanEnd);
-    };
-  }, [onPanMove, onPanEnd]);
+  const { zoom, isZoomed, resetZoom, onPanStart, isPanning } = useZoomPan({
+    chartRef, xMin: CS, xMax: CE, yMin: yUnitBot, yMax: yUnitTop,
+    margin: CHART_MARGIN, yAxisW: YAXIS_W, height: CHART_HEIGHT,
+  });
 
   // Derived domains from zoom state
   const xDomain = [zoom.x0, zoom.x1];
@@ -1237,8 +1197,8 @@ function App() {
   // Switching y-axis mode drops any zoom (zoom math lives in log-hours space).
   const switchMode = useCallback(mode => {
     setYMode(mode);
-    setZoom({ x0: CS, x1: CE, ly0: null, ly1: null });
-  }, []);
+    resetZoom();
+  }, [resetZoom]);
 
   const onChartMouseMove = useCallback((e) => {
     if (isPanning.current) return;

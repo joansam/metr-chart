@@ -237,6 +237,25 @@ const LOCAL = {
   await page.getByRole('button', { name: 'Revenue' }).click();
   await page.waitForTimeout(400);
 
+  // wheel-zoom the finance chart (shared useZoomPan hook): Reset zoom appears,
+  // and it must be the only one on the page (the main chart is not zoomed here)
+  if (linePt) {
+    await page.mouse.move(linePt.x, linePt.y);
+    await page.mouse.wheel(0, -300);
+    await page.mouse.wheel(0, -300);
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: 'chart_fin_zoom.png' });
+    const resetBtns = page.getByText('Reset zoom');
+    if (await resetBtns.count() !== 1)
+      failures.push('finance zoom: expected exactly one Reset zoom button');
+    else {
+      await resetBtns.click();
+      await page.waitForTimeout(400);
+      if (await page.getByText('Reset zoom').count() !== 0)
+        failures.push('finance zoom: Reset zoom did not clear');
+    }
+  }
+
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');
   if (errors.length || failures.length) process.exitCode = 1;
