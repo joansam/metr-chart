@@ -119,7 +119,11 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   join the score trends either). Their labs have no METR-tested model, hence
   no ANCOVA intercept: predictions route through the pooled ECI fit (flagged
   in `basis`; the chart's "ECI lab-adj" button falls back to pooled for them).
-  Both share one gold "open-weights" color in the chart.
+  DeepSeek keeps the shared open-weights gold; Z.ai/GLM-5.2 has its own pink —
+  with the finance chart drawing whole trend lines, three-plus gold series
+  became indistinguishable, so Zhipu was pulled out of the group color and
+  Mistral (open-adjacent, behind the frontier — owner's call) took the gold
+  slot. Same entity keeps the same color across both charts.
 - **Slowdown scenario defaults**: it is a hypothetical, so it starts switched
   OFF, and its start date defaults to one year from whenever the page is
   opened (`DECAY_START_DEFAULT`) rather than a fixed date that would silently
@@ -196,9 +200,18 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   The legend chips toggle companies in/out of the display (useful because the
   giants compress everyone else on the log axis) — display only: hiding a
   company rescales the axes but never refits any trend.
+- **"Same slope from last data point" tooltip line**: hovering the
+  current-era trend (fast TH/score line, or a finance company line) at a date
+  past its most recent real point also shows the fitted slope re-anchored
+  through that point. Pure display arithmetic, not a second fit and never fed
+  back into anything — it exists because an OLS line can sit well under a hot
+  streak's latest report (Anthropic's May 2026 $47B is ~2x its fitted line;
+  the TH fast line runs ~35% under Mythos Preview (Early)), and the anchored
+  reading answers "and if growth keeps this rate from where we actually are?"
 - **Finance-chart colors**: labs shared with the capability chart keep their
-  color (same entity, same hue, both charts; the open-weights gold now also
-  covers MiniMax). New hues — xAI #2fbcd3, Mistral #e069a8, Cohere #8f7bf0 —
+  color (same entity, same hue, both charts; the open-weights gold covers
+  DeepSeek, Moonshot, MiniMax and Mistral). The non-gold hues — xAI #2fbcd3,
+  Z.ai #e069a8, Cohere #8f7bf0 —
   were checked with the dataviz palette validator against the #12121f surface:
   chroma, adjacent-pair CVD separation, normal-vision separation and contrast
   all pass. (The validator's lightness-band check fails for the *pre-existing*

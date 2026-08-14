@@ -172,12 +172,16 @@ const LOCAL = {
   // ── Finance section (Epoch AI-companies data) ──
   await page.getByText('AI Lab Finance Trends').scrollIntoViewIfNeeded();
   await page.waitForTimeout(600);
-  // Revenue view: xAI has a fitted line (n=4) and its cyan is unique to it
-  const strokeDrawn = hex => page.evaluate(h =>
+  // Finance trend lines are the only paths of a given color with dasharray
+  // "8 4" (prediction diamonds use "3 2"), so the checks stay unambiguous even
+  // for colors the top chart also draws.
+  const trendDrawn = hex => page.evaluate(h =>
     [...document.querySelectorAll('path')].some(p =>
       (p.getAttribute('stroke') || '').toLowerCase() === h &&
+      (p.getAttribute('stroke-dasharray') || '') === '8 4' &&
       (p.getAttribute('d') || '').length > 10), hex);
-  if (!await strokeDrawn('#2fbcd3')) failures.push('finance rev: xAI trend line not drawn');
+  if (!await trendDrawn('#2fbcd3')) failures.push('finance rev: xAI trend line not drawn');
+  if (!await trendDrawn('#e069a8')) failures.push('finance rev: Z.ai (pink) trend line not drawn');
   // hover an xAI revenue dot → tooltip with the dollar figure
   const finDot = await page.evaluate(() => {
     const c = [...document.querySelectorAll('circle')].find(el =>
@@ -212,6 +216,8 @@ const LOCAL = {
     await page.waitForTimeout(600);
     if (!await page.evaluate(() => document.body.innerText.includes('xAI trend')))
       failures.push('finance rev: trend-line hover tooltip missing');
+    if (!await page.evaluate(() => document.body.innerText.includes('same slope from last report')))
+      failures.push('finance rev: anchored-trend reading missing from tooltip');
     await page.screenshot({ path: 'chart_fin_line_tip.png' });
     // 40px above the line is outside the 5px hit band: the tooltip should fade
     // (it stays in the DOM at opacity 0, like the main chart's, so test the
@@ -230,7 +236,8 @@ const LOCAL = {
   // Valuations view: Mistral is fitted here (n=5) but not in revenue (n=2)
   await page.getByRole('button', { name: 'Valuations' }).click();
   await page.waitForTimeout(800);
-  if (!await strokeDrawn('#e069a8')) failures.push('finance val: Mistral trend line not drawn');
+  if (!await trendDrawn('#d4b24e')) failures.push('finance val: Mistral (gold) trend line not drawn');
+  if (await trendDrawn('#e069a8')) failures.push('finance val: unexpected Z.ai trend (n=2, dots-only)');
   if (!await page.evaluate(() => document.body.innerText.includes('closed funding round')))
     failures.push('finance val: caption did not switch');
   await page.screenshot({ path: 'chart_fin_val.png' });
@@ -275,6 +282,22 @@ const LOCAL = {
   await page.waitForTimeout(600);
   if (await anthPaths() !== nBefore)
     failures.push('finance toggle: Anthropic did not restore');
+
+  // "same slope from last data point" on the main chart's trend tooltips
+  await page.getByText('METR Time Horizon Trends').scrollIntoViewIfNeeded();
+  await page.getByRole('button', { name: 'Time horizon' }).click();
+  await page.waitForTimeout(800);
+  await page.mouse.move(750, 300); // extrapolation region, right of every dot
+  await page.waitForTimeout(600);
+  if (!await page.evaluate(() => document.body.innerText.includes('same slope from Mythos Preview (Early)')))
+    failures.push('TH tooltip: anchored-trend reading missing');
+  await page.screenshot({ path: 'chart_th_anchored.png' });
+  await page.getByRole('button', { name: 'ECI', exact: true }).click();
+  await page.waitForTimeout(800);
+  await page.mouse.move(750, 300);
+  await page.waitForTimeout(600);
+  if (!await page.evaluate(() => document.body.innerText.includes('same slope from GPT-5.6 Sol')))
+    failures.push('ECI tooltip: anchored-trend reading missing');
 
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');

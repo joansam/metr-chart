@@ -28,13 +28,17 @@ const {
 
 const COL = {
   anthropic: "#d97757", openai: "#18a683", google: "#4285F4",
-  // open-weights reference labs share one color (open-vs-closed gap markers).
-  // Moonshot is counted here on the expectation that K3 weights are imminent;
-  // Epoch still lists K3 as API access (see analysis/NOTES.md).
-  deepseek: "#d4b24e", zai: "#d4b24e", moonshot: "#d4b24e", minimax: "#d4b24e",
-  // labs appearing only in the finance chart (hues validated for CVD
-  // separation + contrast against the #12121f surface)
-  xai: "#2fbcd3", mistral: "#e069a8", cohere: "#8f7bf0",
+  // open-weights / behind-frontier labs share gold (open-vs-closed gap
+  // markers). Zhipu left the group for its own pink: three gold trend lines
+  // on the finance chart were indistinguishable, and Mistral (open-adjacent,
+  // behind the frontier) took its gold slot. Moonshot is counted in gold on
+  // the expectation that K3 weights are imminent; Epoch still lists K3 as
+  // API access (see analysis/NOTES.md).
+  deepseek: "#d4b24e", moonshot: "#d4b24e", minimax: "#d4b24e", mistral: "#d4b24e",
+  zai: "#e069a8",
+  // labs appearing only in the finance chart (all six finance hues validated
+  // for CVD separation + contrast against the #12121f surface)
+  xai: "#2fbcd3", cohere: "#8f7bf0",
   slow: "#7eb8da", fast: "#f06060", decel: "#c084fc",
 };
 const FONT = "Georgia, 'Times New Roman', serif";
@@ -684,6 +688,13 @@ function FinanceChart({ isMobile, vpH }) {
     for (const r of pts) if (!(r.c in f) || r.ts < f[r.c]) f[r.c] = r.ts;
     return f;
   }, [pts]);
+  // Most recent report per company, for the line tooltip's "same slope from
+  // last report" reading (fitted growth rate re-anchored through it).
+  const lastPt = useMemo(() => {
+    const f = {};
+    for (const r of pts) if (!(r.c in f) || r.ts > f[r.c].ts) f[r.c] = r;
+    return f;
+  }, [pts]);
   const trendData = useMemo(() => {
     const d = [], step = 7 * DAY_MS;
     for (let t = FCS; t <= FCE; t += step) {
@@ -868,6 +879,10 @@ function FinanceChart({ isMobile, vpH }) {
           <div style={{fontWeight:700,color:COL[l.c],marginBottom:2}}>{FIN_NAME[l.c]} trend</div>
           <div>{ds}</div>
           <div>{series==="rev"?"Trend revenue":"Trend valuation"}: <b style={{color:"#eee"}}>{fmtUSD(l.v)}</b></div>
+          {lf && lastPt[l.c] && l.ts >= lastPt[l.c].ts && (()=>{ const lp = lastPt[l.c];
+            return (<div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from last report{" "}
+              ({new Date(lp.d).toLocaleString("en-US",{month:"short",year:"numeric"})}, {fmtUSD(lp.v)}):{" "}
+              <b>{fmtUSD(lp.v * Math.exp(lf.a * (l.ts - lp.ts) / YR_MS))}</b></div>);})()}
           {lf && <div style={{fontSize:11,color:"#8fa8c8"}}>
             {Math.exp(lf.a).toFixed(1)}×/yr OLS fit (n={lf.n}, R²={lf.r2.toFixed(2)})</div>}
           {l.ts > TODAY && <div style={{fontSize:11,color:"#777"}}>extrapolated</div>}
@@ -1063,6 +1078,20 @@ function App() {
     for (const m of sorted) { if (m.p > mx) { set.add(m.n + m.d); mx = m.p; } }
     return m => set.has(m.n + m.d);
   }, [models]);
+
+  // Most recent frontier points, for the tooltip's "same slope from last data
+  // point" reading: the fitted line re-anchored through the latest real point.
+  // Display-only arithmetic — no fit changes.
+  const lastSota = useMemo(() => {
+    let m0 = null;
+    for (const m of models) if (isSota(m) && (!m0 || m.ts > m0.ts)) m0 = m;
+    return m0;
+  }, [models, isSota]);
+  const lastIdx = useMemo(() => {
+    let m0 = null;
+    for (const m of idxModels) if (isIdxFrontier(m) && (!m0 || m.ts > m0.ts)) m0 = m;
+    return m0;
+  }, [idxModels, isIdxFrontier]);
 
   const {allFit, recFit} = useMemo(() => {
     const slowCut = new Date(2024,5,1).getTime(); // Jun 1 2024: GPT-4o (May 13) → slow, Claude 3.5 Sonnet (Jun 20) → fast
@@ -1358,11 +1387,19 @@ function App() {
         const SC = { scSlow: scoreSlowLabel, scFast: scoreFastLabel, scDecel: scoreDecelLabel };
         if (SC[p.dataKey])
           return (<div key={p.dataKey} style={{color:p.stroke}}>
-            {SC[p.dataKey]}: <b>{p.value.toFixed(1)}</b></div>);
+            {SC[p.dataKey]}: <b>{p.value.toFixed(1)}</b>
+            {p.dataKey === "scFast" && lastIdx && scoreFit?.fast && ts >= lastIdx.ts &&
+              <div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from {lastIdx.n}:{" "}
+                <b>{(lastIdx.sc + scoreFit.fast.slope * (ts - lastIdx.ts)).toFixed(1)}</b></div>}
+          </div>);
         const dbl=p.payload?.[p.dataKey+"Dbl"];
         const PFX={slow:"Previous trend",fast:"New trend",decel:"Slowdown"};
         const lbl=dbl!=null ? `${PFX[p.dataKey]||"Trend"}: ${dbl.toFixed(1)}-month doubling` : p.name;
-        return (<div key={p.dataKey} style={{color:p.stroke}}>{lbl}: <b>{fmtH(p.value)}</b></div>);
+        return (<div key={p.dataKey} style={{color:p.stroke}}>{lbl}: <b>{fmtH(p.value)}</b>
+          {p.dataKey === "fast" && lastSota && ts >= lastSota.ts &&
+            <div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from {lastSota.n}:{" "}
+              <b>{fmtH(lastSota.p * Math.exp(recFit.a * (ts - lastSota.ts)))}</b></div>}
+        </div>);
       })}
     </div>);
   };
@@ -1406,7 +1443,8 @@ function App() {
           <span style={{color:COL.openai}}>OpenAI</span>{" / "}
           <span style={{color:COL.anthropic}}>Anthropic</span>{" / "}
           <span style={{color:COL.google}}>Google</span>{" / "}
-          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Z.ai, Moonshot)</span>
+          <span style={{color:COL.zai}}>Z.ai</span>{" / "}
+          <span style={{color:COL.deepseek}}>Open-weights (DeepSeek, Moonshot)</span>
         </p>
 
         {/* Y-axis mode: measured time horizon vs capability-index scores */}
@@ -1616,7 +1654,7 @@ function App() {
               background:testedOnly?"#9ab7d3":"transparent",transition:"background 0.15s"}}/>
             <span style={{color:testedOnly?"#ccc":"#777",transition:"color 0.15s"}}>Show tested models only</span>
           </div>
-          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Open-weights",COL.deepseek]].map(([lb,c])=>(
+          {[["OpenAI",COL.openai],["Anthropic",COL.anthropic],["Google",COL.google],["Z.ai",COL.zai],["Open-weights",COL.deepseek]].map(([lb,c])=>(
             <div key={lb} style={{display:"flex",alignItems:"center",gap:5}}>
               <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={c}/></svg>{lb}
             </div>
