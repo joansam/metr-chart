@@ -246,6 +246,17 @@ Bloomberg reported "more than $40B" that day, so the trend overshot by ~30%
 over a six-month horizon (or less, if 40B is a real underestimate). The
 refreshed fit softened to 3.88x/yr.
 
+Second observation (Aug 15 2026, owner-supplied figure not yet in Epoch's
+dataset): Anthropic reportedly hit $63B annualized on Jun 30 2026. The OLS
+fit (10.6x/yr, data through May 15) put Jun 30 at $40.3B — 56% under, because
+the line averages back through the tiny 2023 base. The "trend from last
+report" reading (May 15's $47B extended at the fitted slope) put it at
+$63.3B — a ratio of 1.00, i.e. implied May->Jun growth of 10.2x/yr against
+the fitted 10.6x/yr. Early but consistent lesson from both observations: the
+plain OLS lines lag the current level for hot companies (exactly the bias the
+anchored tooltip line displays), while the anchored reading was excellent at
+a ~6-week horizon. Score the Feb 2027 ledger rows with this in mind.
+
 ## Refreshing the finance data
 
 Epoch updates the AI-companies CSVs roughly weekly. To refresh:
