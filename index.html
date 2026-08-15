@@ -1402,7 +1402,7 @@ function App() {
                 <b>{(lastIdx.sc + scoreFit.fast.slope * (ts - lastIdx.ts)).toFixed(1)}</b></div>}
           </div>);
         const dbl=p.payload?.[p.dataKey+"Dbl"];
-        const PFX={slow:"Previous trend",fast:"New trend",decel:"Slowdown"};
+        const PFX={slow:"Trend",fast:"Trend",decel:"Slowdown"};
         const lbl=dbl!=null ? `${PFX[p.dataKey]||"Trend"}: ${dbl.toFixed(1)}-month doubling` : p.name;
         return (<div key={p.dataKey} style={{color:p.stroke}}>{lbl}: <b>{fmtH(p.value)}</b>
           {p.dataKey === "fast" && lastSota && ts >= lastSota.ts &&
@@ -1424,12 +1424,12 @@ function App() {
   const decYear = new Date(decayStartMs).getFullYear();
   const decelLabel = `Slowdown: −${decayPct}%/doubling from ${decStart}`;
   const scoreSlowLabel = scoreFit && scoreFit.slow
-    ? `Previous trend: +${scoreFit.slow.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (n=${scoreFit.slow.n})`
+    ? `Trend: +${scoreFit.slow.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (pre-2024, n=${scoreFit.slow.n})`
     : "";
   const scoreFastLabel = scoreFit && scoreFit.fast
     ? (scoreFit.fast.pinned
-        ? `New trend: +13.5 ${yMode.toUpperCase()}/yr (system-card rate, n=${scoreFit.fast.n})`
-        : `New trend: +${scoreFit.fast.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (2024+, n=${scoreFit.fast.n})`)
+        ? `Trend: +13.5 ${yMode.toUpperCase()}/yr (system-card rate, n=${scoreFit.fast.n})`
+        : `Trend: +${scoreFit.fast.perYr.toFixed(1)} ${yMode.toUpperCase()}/yr (2024+, n=${scoreFit.fast.n})`)
     : "";
   const scoreDecelLabel = scoreDecel ? `Slowdown: −${decayPct}%/doubling-equiv from ${decStart}` : "";
 
@@ -1567,7 +1567,7 @@ function App() {
               onClick={()=>setExtendSlow(v=>!v)}>
               <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.slow,
                 background:extendSlow?COL.slow:"transparent",transition:"background 0.15s"}}/>
-              <span style={{color:extendSlow?"#ccc":"#777",transition:"color 0.15s"}}>Extend previous trend →</span>
+              <span style={{color:extendSlow?"#ccc":"#777",transition:"color 0.15s"}}>Extend pre-2024 trend →</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}
               onClick={()=>setShowFast(v=>!v)}>
@@ -1585,7 +1585,7 @@ function App() {
               onClick={()=>setPinScore(v=>!v)}>
               <span style={{display:"inline-block",width:14,height:14,borderRadius:3,border:"1.5px solid "+COL.fast,
                 background:pinScore?COL.fast:"transparent",transition:"background 0.15s"}}/>
-              <span style={{color:pinScore?"#ccc":"#777",transition:"color 0.15s"}}>Pin new trend to 13.5/yr (system card)</span>
+              <span style={{color:pinScore?"#ccc":"#777",transition:"color 0.15s"}}>Pin trend to 13.5/yr (system card)</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <svg width={14} height={14}><path d="M 7 1.5 L 12.5 7 L 7 12.5 L 1.5 7 Z" fill="#12121f"
