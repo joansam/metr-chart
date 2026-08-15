@@ -200,14 +200,19 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   The legend chips toggle companies in/out of the display (useful because the
   giants compress everyone else on the log axis) — display only: hiding a
   company rescales the axes but never refits any trend.
-- **"Same slope from last data point" tooltip line**: hovering the
+- **"Trend from last report / <model>" tooltip line**: hovering the
   current-era trend (fast TH/score line, or a finance company line) at a date
-  past its most recent real point also shows the fitted slope re-anchored
-  through that point. Pure display arithmetic, not a second fit and never fed
-  back into anything — it exists because an OLS line can sit well under a hot
-  streak's latest report (Anthropic's May 2026 $47B is ~2x its fitted line;
-  the TH fast line runs ~35% under Mythos Preview (Early)), and the anchored
-  reading answers "and if growth keeps this rate from where we actually are?"
+  past its most recent frontier point also shows the fitted slope re-anchored
+  through that point, styled like the trend line it belongs to. Pure display
+  arithmetic, not a second fit and never fed back into anything — it exists
+  because an OLS line can sit well under a hot streak's latest report
+  (Anthropic's May 2026 $47B is ~2x its fitted line). One DELIBERATE special
+  case, owner's call: for TH/ECI/AECI the anchor is the newest
+  frontier-setting point on screen even when predicted, imputed or estimated —
+  unlike the frontier and trend fits, which stay measured-only. Today that
+  means Opus 5's predicted horizon (TH), Mythos 5's imputed ECI, and Opus 5's
+  measured AECI. With "show tested models only" on, derived points are hidden
+  and the anchor reverts to the newest measured point.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold covers
   DeepSeek, Moonshot, MiniMax and Mistral). The non-gold hues — xAI #2fbcd3,

@@ -187,6 +187,7 @@ const LOCAL = {
     const c = [...document.querySelectorAll('circle')].find(el =>
       el.getAttribute('fill') === '#2fbcd3' && el.getAttribute('r') === '4.5');
     if (!c) return null;
+    c.scrollIntoView({ block: 'center' }); // taller chart: dots can sit below the fold
     const r = c.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
   });
@@ -201,22 +202,24 @@ const LOCAL = {
   }
   // hover the xAI trend LINE itself, 75% along its path (past the last xAI
   // dot, so the dots-win-over-lines priority can't intercept the hit)
-  const linePt = await page.evaluate(() => {
+  const xaiLinePt = () => page.evaluate(() => {
     const p = [...document.querySelectorAll('path')].find(el =>
       (el.getAttribute('stroke') || '').toLowerCase() === '#2fbcd3' &&
       (el.getAttribute('d') || '').length > 10);
     if (!p) return null;
+    p.scrollIntoView({ block: 'center' });
     const pt = p.getPointAtLength(p.getTotalLength() * 0.75);
     const m = p.getScreenCTM();
     return { x: m.a*pt.x + m.c*pt.y + m.e, y: m.b*pt.x + m.d*pt.y + m.f };
   });
+  const linePt = await xaiLinePt();
   if (!linePt) failures.push('finance rev: xAI trend path not found for line hover');
   else {
     await page.mouse.move(linePt.x, linePt.y);
     await page.waitForTimeout(600);
     if (!await page.evaluate(() => document.body.innerText.includes('xAI trend')))
       failures.push('finance rev: trend-line hover tooltip missing');
-    if (!await page.evaluate(() => document.body.innerText.includes('same slope from last report')))
+    if (!await page.evaluate(() => document.body.innerText.includes('Trend from last report')))
       failures.push('finance rev: anchored-trend reading missing from tooltip');
     await page.screenshot({ path: 'chart_fin_line_tip.png' });
     // 40px above the line is outside the 5px hit band: the tooltip should fade
@@ -246,8 +249,9 @@ const LOCAL = {
 
   // wheel-zoom the finance chart (shared useZoomPan hook): Reset zoom appears,
   // and it must be the only one on the page (the main chart is not zoomed here)
-  if (linePt) {
-    await page.mouse.move(linePt.x, linePt.y);
+  const zoomPt = await xaiLinePt(); // re-measure: view toggles may have scrolled
+  if (zoomPt) {
+    await page.mouse.move(zoomPt.x, zoomPt.y);
     await page.mouse.wheel(0, -300);
     await page.mouse.wheel(0, -300);
     await page.waitForTimeout(600);
@@ -283,21 +287,26 @@ const LOCAL = {
   if (await anthPaths() !== nBefore)
     failures.push('finance toggle: Anthropic did not restore');
 
-  // "same slope from last data point" on the main chart's trend tooltips
+  // "Trend from <last frontier point>" on the main chart's trend tooltips.
+  // Re-enable derived points first: the anchor may be predicted/imputed (the
+  // deliberate special case), so with everything shown TH anchors on Opus 5's
+  // predicted horizon and ECI on Mythos 5's imputed score.
+  await page.getByText('Show tested models only').click();
+  await page.waitForTimeout(600);
   await page.getByText('METR Time Horizon Trends').scrollIntoViewIfNeeded();
   await page.getByRole('button', { name: 'Time horizon' }).click();
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300); // extrapolation region, right of every dot
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('same slope from Mythos Preview (Early)')))
-    failures.push('TH tooltip: anchored-trend reading missing');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Opus 5')))
+    failures.push('TH tooltip: anchored-trend reading missing (want predicted Opus 5 anchor)');
   await page.screenshot({ path: 'chart_th_anchored.png' });
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300);
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('same slope from GPT-5.6 Sol')))
-    failures.push('ECI tooltip: anchored-trend reading missing');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5')))
+    failures.push('ECI tooltip: anchored-trend reading missing (want imputed Mythos 5 anchor)');
 
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');

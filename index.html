@@ -727,7 +727,9 @@ function FinanceChart({ isMobile, vpH }) {
   const CHART_MARGIN = isMobile ? { top: 10, right: 16, left: 2, bottom: 30 }
                                 : { top: 20, right: 90, left: 15, bottom: 40 };
   const YAXIS_W = isMobile ? 44 : 62;
-  const H = isMobile ? 320 : clamp(380, Math.round(vpH * 0.45), 560);
+  // Same sizing rule as the capability chart above — the two plots read as
+  // equals, not as a chart and its footnote.
+  const H = isMobile ? 400 : clamp(540, Math.round(vpH * 0.625), 950);
 
   // Same zoom/pan as the capability chart; y zoom state lives in ln(USD).
   const { zoom, isZoomed, resetZoom, onPanStart, isPanning } = useZoomPan({
@@ -880,9 +882,9 @@ function FinanceChart({ isMobile, vpH }) {
           <div>{ds}</div>
           <div>{series==="rev"?"Trend revenue":"Trend valuation"}: <b style={{color:"#eee"}}>{fmtUSD(l.v)}</b></div>
           {lf && lastPt[l.c] && l.ts >= lastPt[l.c].ts && (()=>{ const lp = lastPt[l.c];
-            return (<div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from last report{" "}
+            return (<div>Trend from last report{" "}
               ({new Date(lp.d).toLocaleString("en-US",{month:"short",year:"numeric"})}, {fmtUSD(lp.v)}):{" "}
-              <b>{fmtUSD(lp.v * Math.exp(lf.a * (l.ts - lp.ts) / YR_MS))}</b></div>);})()}
+              <b style={{color:"#eee"}}>{fmtUSD(lp.v * Math.exp(lf.a * (l.ts - lp.ts) / YR_MS))}</b></div>);})()}
           {lf && <div style={{fontSize:11,color:"#8fa8c8"}}>
             {Math.exp(lf.a).toFixed(1)}×/yr OLS fit (n={lf.n}, R²={lf.r2.toFixed(2)})</div>}
           {l.ts > TODAY && <div style={{fontSize:11,color:"#777"}}>extrapolated</div>}
@@ -1079,19 +1081,26 @@ function App() {
     return m => set.has(m.n + m.d);
   }, [models]);
 
-  // Most recent frontier points, for the tooltip's "same slope from last data
-  // point" reading: the fitted line re-anchored through the latest real point.
-  // Display-only arithmetic — no fit changes.
+  // Most recent frontier point, for the tooltip's "Trend from <last point>"
+  // reading: the fitted slope re-anchored through the newest point that beats
+  // everything before it. DELIBERATE special case (owner's call): unlike the
+  // frontier and trend fits, predicted/imputed/estimated points count here —
+  // the anchor is the newest frontier-setting mark on screen, whatever its
+  // provenance. Display-only arithmetic; nothing feeds back into any fit.
+  // With "tested only" on the derived points are hidden, so the anchor
+  // reverts to the newest measured point rather than something invisible.
   const lastSota = useMemo(() => {
-    let m0 = null;
-    for (const m of models) if (isSota(m) && (!m0 || m.ts > m0.ts)) m0 = m;
+    const cands = [...models, ...(testedOnly ? [] : predModels)].sort((a, b) => a.ts - b.ts);
+    let m0 = null, mx = -Infinity;
+    for (const m of cands) if (m.p > mx) { mx = m.p; m0 = m; }
     return m0;
-  }, [models, isSota]);
+  }, [models, predModels, testedOnly]);
   const lastIdx = useMemo(() => {
-    let m0 = null;
-    for (const m of idxModels) if (isIdxFrontier(m) && (!m0 || m.ts > m0.ts)) m0 = m;
+    const sorted = [...idxModels].sort((a, b) => a.ts - b.ts);
+    let m0 = null, mx = -Infinity;
+    for (const m of sorted) if (m.sc > mx) { mx = m.sc; m0 = m; }
     return m0;
-  }, [idxModels, isIdxFrontier]);
+  }, [idxModels]);
 
   const {allFit, recFit} = useMemo(() => {
     const slowCut = new Date(2024,5,1).getTime(); // Jun 1 2024: GPT-4o (May 13) → slow, Claude 3.5 Sonnet (Jun 20) → fast
@@ -1389,7 +1398,7 @@ function App() {
           return (<div key={p.dataKey} style={{color:p.stroke}}>
             {SC[p.dataKey]}: <b>{p.value.toFixed(1)}</b>
             {p.dataKey === "scFast" && lastIdx && scoreFit?.fast && ts >= lastIdx.ts &&
-              <div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from {lastIdx.n}:{" "}
+              <div>Trend from {lastIdx.n}:{" "}
                 <b>{(lastIdx.sc + scoreFit.fast.slope * (ts - lastIdx.ts)).toFixed(1)}</b></div>}
           </div>);
         const dbl=p.payload?.[p.dataKey+"Dbl"];
@@ -1397,7 +1406,7 @@ function App() {
         const lbl=dbl!=null ? `${PFX[p.dataKey]||"Trend"}: ${dbl.toFixed(1)}-month doubling` : p.name;
         return (<div key={p.dataKey} style={{color:p.stroke}}>{lbl}: <b>{fmtH(p.value)}</b>
           {p.dataKey === "fast" && lastSota && ts >= lastSota.ts &&
-            <div style={{fontSize:11,color:"#9ab7d3"}}>↳ same slope from {lastSota.n}:{" "}
+            <div>Trend from {lastSota.n}:{" "}
               <b>{fmtH(lastSota.p * Math.exp(recFit.a * (ts - lastSota.ts)))}</b></div>}
         </div>);
       })}
