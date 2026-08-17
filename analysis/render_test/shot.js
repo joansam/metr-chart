@@ -308,6 +308,58 @@ const LOCAL = {
   if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5')))
     failures.push('ECI tooltip: anchored-trend reading missing (want imputed Mythos 5 anchor)');
 
+  // ── Mobile: pinch zoom must stay continuous across a multi-step gesture ──
+  // (regression test for the one-step-pinch bug: gesture state used to reset
+  // on every zoom-induced re-render, so only the first touchmove applied)
+  const mob = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  mob.on('pageerror', e => errors.push('mobile: ' + String(e)));
+  await mob.route('**cdnjs.cloudflare.com/**', route => {
+    const url = route.request().url();
+    const hit = Object.keys(LOCAL).find(k => url.includes(k));
+    if (hit) route.fulfill({ body: fs.readFileSync(path.join(NM, LOCAL[hit])),
+                             contentType: 'application/javascript' });
+    else route.abort();
+  });
+  await mob.goto('file://' + path.resolve(__dirname, '../../index.html'));
+  await mob.waitForTimeout(4000);
+  const mobCdp = await mob.context().newCDPSession(mob);
+  const chartMid = await mob.evaluate(() => {
+    const el = document.querySelector('.recharts-wrapper');
+    el.scrollIntoView({ block: 'center' });
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  // Compare the rendered x-tick label SEQUENCE, not the count — Recharts
+  // hides overlapping labels, so the count is not monotonic in zoom level.
+  const tickSig = () => mob.evaluate(() => {
+    const svg = document.querySelector('svg');
+    return [...svg.querySelectorAll('text')]
+      .filter(t => /^(20\d\d|Jul '\d\d)$/.test(t.textContent))
+      .map(t => t.textContent).join(',');
+  });
+  const sigFull = await tickSig();
+  const pts = d => [{ x: chartMid.x - d, y: chartMid.y, id: 0 },
+                    { x: chartMid.x + d, y: chartMid.y, id: 1 }];
+  await mobCdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pts(40) });
+  let sigAfterOne = null;
+  for (let d = 60; d <= 160; d += 20) {
+    await mobCdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pts(d) });
+    await mob.waitForTimeout(120);
+    if (sigAfterOne === null) sigAfterOne = await tickSig();
+  }
+  await mobCdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await mob.waitForTimeout(400);
+  const sigAfterAll = await tickSig();
+  // continuous pinch keeps shrinking the domain after the first step
+  if (sigAfterOne === sigFull)
+    failures.push('mobile pinch: first step did not zoom');
+  if (sigAfterAll === sigAfterOne)
+    failures.push(`mobile pinch: gesture died after one step (ticks stuck at "${sigAfterOne}")`);
+  if (await mob.getByText('Reset zoom').count() < 1)
+    failures.push('mobile pinch: Reset zoom button missing');
+  await mob.screenshot({ path: 'chart_mobile_pinch.png' });
+  await mob.close();
+
   console.log('pageerrors:', errors.length ? errors : 'none');
   console.log('assertions:', failures.length ? failures : 'all passed');
   if (errors.length || failures.length) process.exitCode = 1;

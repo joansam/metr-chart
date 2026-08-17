@@ -515,17 +515,32 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
   const ZOOM_FACTOR = 0.15;
   const [zoom, setZoom] = useState({ x0: xMin, x1: xMax, ly0: null, ly1: null });
   const isZoomed = zoom.x0 !== xMin || zoom.x1 !== xMax || zoom.ly0 !== null || zoom.ly1 !== null;
-  const resetZoom = useCallback(() => setZoom({ x0: xMin, x1: xMax, ly0: null, ly1: null }), [xMin, xMax]);
 
-  const plotBounds = useCallback(rect => ({
-    left: margin.left + yAxisW, right: rect.width - margin.right,
-    top: margin.top, bottom: height - margin.bottom,
-  }), [margin, yAxisW, height]);
+  // Gesture handlers must survive re-renders MID-GESTURE: every setZoom
+  // re-renders, and handlers rebuilt from fresh deps each render would tear
+  // down and re-attach their listeners, resetting in-flight pinch state after
+  // one step (the "one-step pinch" bug this structure fixed). So the current
+  // parameters live in a ref the stable handlers read at event time, and
+  // every listener attaches exactly once.
+  const params = useRef({});
+  params.current = { xMin, xMax, yMin, yMax, margin, yAxisW, height, isZoomed };
+
+  const resetZoom = useCallback(() => {
+    const p = params.current;
+    setZoom({ x0: p.xMin, x1: p.xMax, ly0: null, ly1: null });
+  }, []);
+
+  const plotBounds = rect => {
+    const p = params.current;
+    return { left: p.margin.left + p.yAxisW, right: rect.width - p.margin.right,
+             top: p.margin.top, bottom: p.height - p.margin.bottom };
+  };
 
   // factor > 1 zooms out, < 1 zooms in; (mx, my) is the anchor in container px.
   const applyZoom = useCallback((factor, mx, my) => {
     const el = chartRef.current;
     if (!el) return;
+    const p = params.current;
     const b = plotBounds(el.getBoundingClientRect());
     const fx = Math.max(0, Math.min(1, (mx - b.left) / (b.right - b.left)));
     const fy = Math.max(0, Math.min(1, (my - b.top) / (b.bottom - b.top))); // 0=top, 1=bottom
@@ -534,43 +549,44 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
       const newXSpan = xSpan * factor;
       let nx0 = prev.x0 - (newXSpan - xSpan) * fx;
       let nx1 = nx0 + newXSpan;
-      if (nx0 < xMin) { nx0 = xMin; nx1 = Math.min(xMax, nx0 + newXSpan); }
-      if (nx1 > xMax) { nx1 = xMax; nx0 = Math.max(xMin, nx1 - newXSpan); }
-      if (nx1 - nx0 >= xMax - xMin) { nx0 = xMin; nx1 = xMax; }
+      if (nx0 < p.xMin) { nx0 = p.xMin; nx1 = Math.min(p.xMax, nx0 + newXSpan); }
+      if (nx1 > p.xMax) { nx1 = p.xMax; nx0 = Math.max(p.xMin, nx1 - newXSpan); }
+      if (nx1 - nx0 >= p.xMax - p.xMin) { nx0 = p.xMin; nx1 = p.xMax; }
       // fy=1 (bottom) anchors near ly0, fy=0 (top) near ly1
-      const ply0 = prev.ly0 ?? yMin, ply1 = prev.ly1 ?? yMax;
+      const ply0 = prev.ly0 ?? p.yMin, ply1 = prev.ly1 ?? p.yMax;
       const lySpan = ply1 - ply0;
       const newLySpan = lySpan * factor;
       let nly0 = ply0 - (newLySpan - lySpan) * (1 - fy);
       let nly1 = nly0 + newLySpan;
-      if (nly0 < yMin) { nly0 = yMin; nly1 = Math.min(yMax, nly0 + newLySpan); }
-      if (nly1 > yMax) { nly1 = yMax; nly0 = Math.max(yMin, nly1 - newLySpan); }
-      if (nly1 - nly0 >= yMax - yMin) { nly0 = yMin; nly1 = yMax; }
+      if (nly0 < p.yMin) { nly0 = p.yMin; nly1 = Math.min(p.yMax, nly0 + newLySpan); }
+      if (nly1 > p.yMax) { nly1 = p.yMax; nly0 = Math.max(p.yMin, nly1 - newLySpan); }
+      if (nly1 - nly0 >= p.yMax - p.yMin) { nly0 = p.yMin; nly1 = p.yMax; }
       return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
     });
-  }, [chartRef, plotBounds, xMin, xMax, yMin, yMax]);
+  }, []);
 
   // Grab-style pan: dragging down moves the view to higher values.
   const applyPan = useCallback((dx, dy) => {
     const el = chartRef.current;
     if (!el) return;
+    const p = params.current;
     const b = plotBounds(el.getBoundingClientRect());
     const plotW = b.right - b.left, plotH = b.bottom - b.top;
     setZoom(prev => {
       const xSpan = prev.x1 - prev.x0;
       const xShift = -(dx / plotW) * xSpan;
       let nx0 = prev.x0 + xShift, nx1 = prev.x1 + xShift;
-      if (nx0 < xMin) { nx0 = xMin; nx1 = nx0 + xSpan; }
-      if (nx1 > xMax) { nx1 = xMax; nx0 = nx1 - xSpan; }
-      const ply0 = prev.ly0 ?? yMin, ply1 = prev.ly1 ?? yMax;
+      if (nx0 < p.xMin) { nx0 = p.xMin; nx1 = nx0 + xSpan; }
+      if (nx1 > p.xMax) { nx1 = p.xMax; nx0 = nx1 - xSpan; }
+      const ply0 = prev.ly0 ?? p.yMin, ply1 = prev.ly1 ?? p.yMax;
       const lySpan = ply1 - ply0;
       const lyShift = (dy / plotH) * lySpan;
       let nly0 = ply0 + lyShift, nly1 = ply1 + lyShift;
-      if (nly0 < yMin) { nly0 = yMin; nly1 = nly0 + lySpan; }
-      if (nly1 > yMax) { nly1 = yMax; nly0 = nly1 - lySpan; }
+      if (nly0 < p.yMin) { nly0 = p.yMin; nly1 = nly0 + lySpan; }
+      if (nly1 > p.yMax) { nly1 = p.yMax; nly0 = nly1 - lySpan; }
       return { x0: nx0, x1: nx1, ly0: nly0, ly1: nly1 };
     });
-  }, [chartRef, plotBounds, xMin, xMax, yMin, yMax]);
+  }, []);
 
   // Wheel zoom (passive:false so preventDefault stops the page scrolling).
   useEffect(() => {
@@ -584,17 +600,17 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [applyZoom, chartRef]);
+  }, [applyZoom]);
 
   // Desktop drag-pan (window listeners so dragging outside the chart works).
   const isPanning = useRef(false);
   const panLast = useRef({ x: 0, y: 0 });
   const onPanStart = useCallback((e) => {
-    if (!isZoomed) return;
+    if (!params.current.isZoomed) return;
     isPanning.current = true;
     panLast.current = { x: e.clientX, y: e.clientY };
     e.preventDefault();
-  }, [isZoomed]);
+  }, []);
   useEffect(() => {
     const onMove = e => {
       if (!isPanning.current) return;
@@ -610,11 +626,13 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
     };
   }, [applyPan]);
 
-  // Touch: two-finger pinch zoom; single-finger pan once zoomed.
+  // Touch: two-finger pinch zoom; single-finger pan once zoomed. Pinch state
+  // lives in a ref so a re-render (or even a re-attached effect) can never
+  // reset it mid-gesture.
+  const pinchDist = useRef(null);
   useEffect(() => {
     const el = chartRef.current;
     if (!el) return;
-    const pinch = { dist: null };
     const touchPt = e => {
       const t0 = e.touches[0], t1 = e.touches[1];
       const rect = el.getBoundingClientRect();
@@ -626,27 +644,27 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
       if (e.touches.length === 2) {
         e.preventDefault();
         isPanning.current = false;
-        pinch.dist = touchPt(e).dist;
-      } else if (e.touches.length === 1 && isZoomed) {
+        pinchDist.current = touchPt(e).dist;
+      } else if (e.touches.length === 1 && params.current.isZoomed) {
         isPanning.current = true;
         panLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }
     };
     const onTouchMove = (e) => {
-      if (e.touches.length === 2 && pinch.dist != null) {
+      if (e.touches.length === 2 && pinchDist.current != null) {
         e.preventDefault();
         isPanning.current = false;
         const p = touchPt(e);
-        applyZoom(pinch.dist / p.dist, p.cx, p.cy); // pinch in = zoom out
-        pinch.dist = p.dist;
-      } else if (e.touches.length === 1 && isPanning.current && isZoomed) {
+        applyZoom(pinchDist.current / p.dist, p.cx, p.cy); // pinch in = zoom out
+        pinchDist.current = p.dist;
+      } else if (e.touches.length === 1 && isPanning.current && params.current.isZoomed) {
         e.preventDefault();
         const t = e.touches[0];
         applyPan(t.clientX - panLast.current.x, t.clientY - panLast.current.y);
         panLast.current = { x: t.clientX, y: t.clientY };
       }
     };
-    const onTouchEnd = () => { pinch.dist = null; isPanning.current = false; };
+    const onTouchEnd = () => { pinchDist.current = null; isPanning.current = false; };
     el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd);
@@ -655,7 +673,7 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [applyZoom, applyPan, isZoomed, chartRef]);
+  }, [applyZoom, applyPan]);
 
   return { zoom, isZoomed, resetZoom, onPanStart, isPanning };
 }
