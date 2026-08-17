@@ -400,6 +400,7 @@ const FIN_RAW = [
   { c: "anthropic", s: "rev", d: "2026-03-03", v: 19000000000, t: "run rate", cf: "Confident", src: "x.com" },
   { c: "anthropic", s: "rev", d: "2026-04-06", v: 30000000000, t: "run rate", cf: "Confident", src: "anthropic.com" },
   { c: "anthropic", s: "rev", d: "2026-05-15", v: 47000000000, t: "run rate", cf: "Likely", src: "anthropic.com" },
+  { c: "anthropic", s: "rev", d: "2026-07-31", v: 65000000000, t: "run rate", cf: "Likely", src: "bloomberg.com" },
   { c: "cohere", s: "rev", d: "2023-12-31", v: 13000000, t: "run rate", cf: "Likely", src: "finance.yahoo.com" },
   { c: "cohere", s: "rev", d: "2024-03-15", v: 22000000, t: "run rate", cf: "Likely", src: "finance.yahoo.com" },
   { c: "cohere", s: "rev", d: "2025-02-24", v: 70000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
@@ -474,7 +475,7 @@ const FIN_RAW = [
 ];
 // ln(USD) = b + a*(years since 2024-01-01); OLS per company, n >= 4 points.
 const FIN_FITS = {
-  rev: { anthropic: { a: 2.360964, b: 18.5303, n: 14, r2: 0.983 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.355553, b: 21.0843, n: 16, r2: 0.966 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
+  rev: { anthropic: { a: 2.392008, b: 18.5013, n: 15, r2: 0.984 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.355553, b: 21.0843, n: 16, r2: 0.966 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
   val: { anthropic: { a: 1.337501, b: 23.7067, n: 10, r2: 0.973 }, mistral: { a: 1.608350, b: 21.0731, n: 5, r2: 0.822 }, openai: { a: 0.924117, b: 25.2022, n: 9, r2: 0.955 }, xai: { a: 1.478388, b: 23.3704, n: 5, r2: 0.956 } },
 };
 

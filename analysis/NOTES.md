@@ -24,8 +24,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Jul 24 -> Aug 2 by up to 1.8 (Kimi K3), so never treat a refresh as a
   no-op: regenerate the arrays and re-check the stats quoted in BASIS_DOC.
 - `data/ai_companies_revenue_reports.csv` / `data/ai_companies_funding_rounds.csv`
-  — Epoch AI "AI Companies" hub download (Aug 10 2026 snapshot; revenue file
-  dated Jul 31, funding file Jul 31; CC-BY 4.0, cite epoch.ai/data/ai-companies).
+  — Epoch AI "AI Companies" hub download (Aug 17 2026 snapshot; CC-BY 4.0,
+  cite epoch.ai/data/ai-companies).
   Feeds the finance chart via `finance_data.py`. Refresh straight from
   `https://epoch.ai/data/ai_companies_revenue_reports.csv` and
   `https://epoch.ai/data/ai_companies_funding_rounds.csv` (updated ~weekly),
@@ -256,6 +256,16 @@ the fitted 10.6x/yr. Early but consistent lesson from both observations: the
 plain OLS lines lag the current level for hot companies (exactly the bias the
 anchored tooltip line displays), while the anchored reading was excellent at
 a ~6-week horizon. Score the Feb 2027 ledger rows with this in mind.
+
+Third observation (Aug 17 2026 refresh): Epoch ingested Anthropic's $65B run
+rate dated Jul 31 (Bloomberg). Against the pre-refresh fit (data through
+May 15): OLS said $49.2B (actual 1.32x above), anchored-from-May said $77.3B
+(actual 0.84x). With the Jun 30 $63B figure this brackets a sharp July
+deceleration — 63 -> 65 in a month is ~1.4x/yr annualized, versus 10x/yr
+May -> June. One month proves little, but the pattern so far: OLS too low,
+anchored-at-full-slope too high past ~6 weeks. The refreshed fit is
+10.94x/yr (n=15) — the new point pulled it UP, since $65B sits above even
+the steep line.
 
 ## Refreshing the finance data
 
