@@ -21,3 +21,9 @@ vintage,series,entity,target_date,predicted,unit,actual,actual_date,note
 2026-08-17,val,mistral,2027-02-16,216702011004,USD,,,"4.99x/yr fit, n=5, R2=0.822"
 2026-08-17,val,openai,2027-02-16,1584953704882,USD,,,"2.52x/yr fit, n=9, R2=0.955"
 2026-08-17,val,xai,2027-02-16,1435883160747,USD,,,"4.39x/yr fit, n=5, R2=0.956"
+2026-09-01,th_p50,Mythos 5.1,,69.8,hours,,,AECI-fit prediction (AECI 161.98 from Fable 5.1/Mythos 5.1 system card); event-based
+2026-09-01,th_p80,Mythos 5.1,,9.3,hours,,,AECI-fit prediction (AECI 161.98 from Fable 5.1/Mythos 5.1 system card); event-based
+2026-09-01,th_p50,Mythos/Fable 5 (launch),,43.4,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Mythos 5 161.29 -> 159.46); earlier 61.3 h row stands as the Jun 20 vintage"
+2026-09-01,th_p80,Mythos/Fable 5 (launch),,5.8,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Mythos 5 161.29 -> 159.46); earlier 8.2 h row stands as the Jun 20 vintage"
+2026-09-01,th_p50,Opus 5,,55.2,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Opus 5 162.1 -> 160.73); earlier 71.4 h row stands as the Jul 24 vintage"
+2026-09-01,th_p80,Opus 5,,7.4,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Opus 5 162.1 -> 160.73); earlier 9.5 h row stands as the Jul 24 vintage"

@@ -16,13 +16,14 @@ Data sources:
       Epoch AI's Benchmarking Hub (https://epoch.ai/benchmarks, CC-BY 4.0).
       METR Time Horizons is NOT among the benchmarks that feed the ECI, so
       fit 2 is not circular.
-    - AECI: analysis/data/aeci_systemcards.csv - Barry's extraction from the
-      Fable/Mythos 5 system card chart (Datawrapper dataset behind his Jun 20
-      2026 post), plus the Claude Opus 5 point quoted in the Opus 5 system
-      card (Jul 24 2026). Anthropic rerun the ECI fit globally at each
-      release, so values drift between snapshots; the two vintages are
-      mixable here because Mythos 5 is unchanged across them (161.3
-      [157.3, 165.4] in both). See the `source` column.
+    - AECI: analysis/data/aeci_systemcards.csv - one vintage only: the
+      "Anthropic ECI over time" chart in the Claude Fable 5.1 & Mythos 5.1
+      system card (Sep 1 2026), Figure 2.3.5.A. Three points (Mythos 5.1,
+      Mythos 5, Opus 5) are quoted in the card's prose; the rest are
+      digitized from the figure (see analysis/NOTES.md). Anthropic rerun the
+      ECI fit globally at each release, so values drift between cards
+      (Mythos 5: 161.29 in the Fable 5 card -> 159.46 here), which is why
+      vintages are never mixed. See the `source` column.
 
 Usage:
     python analysis/eci_conversions.py               # print fits + tables
@@ -80,6 +81,10 @@ MODELS = {
     # the Jul 24 system card's AECI and Epoch's published ECI — so unlike the
     # other prediction-only rows it joins the ECI<->AECI fit basis.
     "Claude Opus 5":           (None,                                 "claude-opus-5",              "anthropic"),
+    # Mythos 5.1 (Sep 1 2026 card): AECI only so far. Epoch has not yet scored
+    # the GA variant, Fable 5.1 — add a "Claude Fable 5.1" row with its ECI key
+    # when it lands, mirroring the Mythos 5 / Fable 5 split above.
+    "Claude Mythos 5.1":       (None,                                 None,                         "anthropic"),
     "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
     "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
     "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
@@ -122,10 +127,6 @@ REWARD_HACKED = ("GPT-5.3 Codex", "GPT-5.4")
 GPT35 = {"name": "GPT-3.5 Instruct", "metr_key": "gpt_3_5_turbo_instruct",
          "eci": 119.0, "lab": "openai"}
 
-# Barry's AECI CSV uses his combined "Mythos/Fable 5" label for the system
-# card point; per the card itself that point is Mythos 5.
-AECI_ALIASES = {"Claude Mythos 5": "Claude Mythos/Fable 5"}
-
 # Models without a METR run that get plotted in index.html as predictions.
 # Release dates from Epoch's CSV / system cards (Mythos Preview = the April 7
 # launch version, not METR's early checkpoint).
@@ -138,6 +139,9 @@ PREDICTED_DATES = {
     "Claude Fable 5":        "2026-06-09",
     # Epoch dates Opus 5 to the same day as its system card.
     "Claude Opus 5":         "2026-07-24",
+    # System-card / GA date. The card's AECI chart plots the dot ~Aug 7 (the
+    # evaluated snapshot, presumably); the release-date convention wins here.
+    "Claude Mythos 5.1":     "2026-09-01",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
     "DeepSeek-R1":           "2025-01-20",
@@ -236,7 +240,7 @@ def assemble(with_gpt35=False):
     rows = []
     for name, (mkey, ekey, lab) in MODELS.items():
         p50, p80, date = metr.get(mkey, (None, None, None)) if mkey else (None,) * 3
-        a = aeci.get(AECI_ALIASES.get(name, name))
+        a = aeci.get(name)
         rows.append({"name": name, "p50": p50, "p80": p80, "lab": lab,
                      "date": date or PREDICTED_DATES.get(name),
                      "eci": eci.get(ekey) if ekey else None,
@@ -500,8 +504,9 @@ def report(rows, fits, eci_all):
             print(f"{r['name']:24s} AECI {r['aeci']:6.1f} -> implied public ECI {f['invert'](r['aeci']):6.2f}")
         else:
             print(f"{r['name']:24s} ECI  {r['eci']:6.2f} -> implied AECI {f['predict'](r['eci']):6.1f}")
-    print("\nBarry's Jun 20 post predictions to reproduce (his 'Mythos/Fable 5'"
-          " = the system card's Mythos 5): p50 61.3 h, p80 8.2 h")
+    print("\nBarry's Jun 20 post predictions (Mythos 5: p50 61.3 h, p80 8.2 h) were"
+          " made on the Fable 5 card's AECI vintage; the current file is the"
+          " Fable 5.1 vintage, so they no longer reproduce exactly (see NOTES.md).")
 
 
 def convert(fits, eci=None, aeci=None, lab=None):
