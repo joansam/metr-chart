@@ -33,26 +33,41 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   `finance_data.COMPANY_KEY` fails loudly — add it there and to COL/FIN_NAME
   in index.html (new colors go through the CVD/contrast validation noted below).
 - `data/aeci_systemcards.csv` — AECI point estimates with CIs, one row per
-  model, `source` naming the system card each row came from:
-  - `fable5_card` — Barry's extraction of the "Anthropic ECI over time" chart
-    in the Fable/Mythos 5 system card, from the Datawrapper dataset behind his
-    Jun 20 post (datawrapper.dwcdn.net/qBQks/1/dataset.csv).
-  - `opus5_card` — the Claude Opus 5 point quoted in prose in the Opus 5
-    system card (Jul 24 2026), §2.3.3.
-  Anthropic "rerun the ECI fit globally" at each release, so vintages are only
-  mixable when they agree on the models they share. These two do: Mythos 5 is
-  161.3 [157.3, 165.4] in both cards, unchanged to the precision either
-  reports, so no benchmark was added or dropped in a way that moved the scale
-  and Opus 5's 162.1 is directly comparable to the older rows. Re-check that
-  overlap before appending the next card's rows; if it fails, replace the
-  whole file with the new vintage instead of appending.
+  model, `source` naming the system card the vintage came from. **One vintage
+  at a time.** Anthropic "rerun the ECI fit globally" at each release, so
+  each card's chart is a different scale; vintages are only mixable when they
+  agree on the models they share, and the Sep 1 2026 card broke that (Mythos 5
+  161.29 -> 159.46, Opus 5 162.1 -> 160.73, both well inside their CIs but a
+  full ~1.5 points), so the whole file was replaced rather than appended to.
+  - `fable51_card` (current) — the "Anthropic ECI over time" chart in the
+    Claude Fable 5.1 & Claude Mythos 5.1 system card (Sep 1 2026), Figure
+    2.3.5.A, §2.3.5. The figure is a 2000x1300 raster, not a Datawrapper
+    embed, so nine of the twelve points were digitized from it: dot centroids
+    and whisker-cap rows calibrated against the y-axis tick marks (17.24 px
+    per AECI point, so ~0.06 pt/px; whiskers read to ±1 px). The three points
+    the card also quotes in prose — Mythos 5.1 161.98 [158.20, 169.00],
+    Mythos 5 159.46 [156.30, 165.46], Opus 5 160.73 [157.35, 167.11] — are
+    entered verbatim and double as the accuracy check: the digitizer read
+    them as 161.96, 160.69 and 159.64 (CI ends all within 0.1), so the
+    digitized rows are good to about ±0.2 and are recorded to one decimal.
+    Sonnet 3.5 (Jun 2024) anchors the scale at 130 with no CI.
+    This chart does NOT include Opus 4.7 or Opus 4.8 (the Fable 5 card's
+    did), so they now have no AECI here — see the methodology note below.
+  - Superseded: `fable5_card` (Barry's Datawrapper extraction of the Fable 5
+    card chart, datawrapper.dwcdn.net/qBQks/1/dataset.csv) and `opus5_card`
+    (the Opus 5 point quoted in that card's §2.3.3). Both live in git history
+    and are what Barry's two posts and the Jun/Jul ledger rows were computed
+    on.
+  Before appending the next card's rows, check the shared models agree; if
+  not, replace the whole file again with the new vintage.
 
 ## Methodology decisions worth remembering
 
 - **Mythos 5 vs Fable 5**: the system card's AECI point is Mythos 5; Epoch's
   public ECI measures the GA Fable 5. Same underlying model, different
   deployment variants — kept as separate rows, and the cross-variant pair is
-  excluded from the ECI<->AECI fit basis (n=11 within-variant Claude pairs).
+  excluded from the ECI<->AECI fit basis (n=9 within-variant Claude pairs on
+  the Fable 5.1 vintage; n=11 before Opus 4.7/4.8 lost their AECI).
 - **Provenance tiers**: measured > imputed (one index derived from the other
   via the ECI<->AECI line) > estimated (both indices derived from a measured
   METR horizon). **Only measured values set a score frontier.** Imputed and
@@ -96,7 +111,9 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   AECI fit. On the score frontiers the running max puts it on AECI (162.1 >
   Mythos 5's 161.29) and off ECI (161.05 < Fable 5's 161.55). Since the AECI
   frontier is Anthropic-only, that split is now the normal case for Claude
-  models rather than anything peculiar to Opus 5.
+  models rather than anything peculiar to Opus 5. (On the Fable 5.1 vintage
+  the AECI frontier order is Mythos 5 159.46 < Opus 5 160.73 < Mythos 5.1
+  161.98, so the same running max still puts Opus 5 on it.)
   A `TREND_EXCLUDE` hold-out was briefly added to keep it off the AECI
   frontier, on the theory that a distillation of the Mythos/Fable line is not
   an independent frontier push. It was removed: it changed the AECI trend by
@@ -105,6 +122,38 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   the inconsistency. If a future model genuinely needs holding out, add the
   mechanism back deliberately and document why here — do not reach for it to
   shave fractions of a point.
+- **AECI vintage swap, Sep 1 2026 (Fable 5.1 / Mythos 5.1 card).** The
+  uniform rule is "the AECI file is the latest card's chart, whole"; two
+  consequences fell out of it and were kept rather than patched:
+  - *Opus 4.7 and 4.8 lost their AECI.* The new chart omits them, so they are
+    now ECI-only rows and take the same route as Fable 5: Epoch ECI -> implied
+    AECI through the fitted line -> horizon. Their predicted p50s move from
+    18.7 h / 24.3 h to 17.3 h / 24.0 h, i.e. the implied-AECI route lands
+    within ~8% of what their old measured AECIs gave. Carrying their old
+    values forward on a rescaled axis was rejected: it would need a
+    vintage-to-vintage correction fit, which is one more derived quantity
+    dressed up as a measurement. If a later card re-plots them, they come back
+    automatically.
+  - *Every Claude prediction moved.* The rescale pulled the recent points
+    down ~1.5 pts, and the AECI->TH fit barely changed (n=7 measured pairs;
+    slope 0.1890 -> 0.1887, R² 0.997 -> 0.998, still ~3.7 pts per doubling),
+    so predictions fell with the inputs: Mythos 5 61.3 h -> 43.4 h, Opus 5
+    71.4 h -> 55.2 h, Mythos Preview 39.1 h -> 31.1 h. Mythos 5.1 at 161.98
+    predicts 69.8 h p50 / 9.3 h p80. The ECI<->AECI line went from
+    0.30 + 0.991*ECI (n=11) to 2.71 + 0.973*ECI (n=9). The ECI-side fits are
+    untouched (no ECI changed). The AECI view's frontier trend (measured,
+    Anthropic-only running max) goes 15.8 -> 15.1 pts/yr, n=10 -> 11, with
+    Mythos 5.1 joining the frontier; the ECI trend is unchanged at 14.3.
+  - The earlier ledger rows (61.3 h / 71.4 h) stand as written; the
+    re-predictions are appended as 2026-09-01 rows so both vintages get
+    scored when METR publishes.
+  - Mythos 5.1 is dated 2026-09-01 (system card / GA date, the same
+    convention as Opus 5). The card's chart plots its dot at ~Aug 7 2026,
+    presumably the evaluated snapshot; Mythos Preview likewise plots ~Mar 23
+    there against the Apr 7 launch date used here.
+  - Fable 5.1 has no Epoch ECI yet. When it lands, add a "Claude Fable 5.1"
+    row (ECI key only) next to Mythos 5.1 in `MODELS`, exactly as Fable 5 sits
+    next to Mythos 5, and re-run `--emit-js`.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
   *API access* — Moonshot shipped K2.x as open weights but had not released
   K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
@@ -210,8 +259,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   case, owner's call: for TH/ECI/AECI the anchor is the newest
   frontier-setting point on screen even when predicted, imputed or estimated —
   unlike the frontier and trend fits, which stay measured-only. Today that
-  means Opus 5's predicted horizon (TH), Mythos 5's imputed ECI, and Opus 5's
-  measured AECI. With "show tested models only" on, derived points are hidden
+  means Mythos 5.1 in all three views: its predicted horizon (TH), its imputed
+  ECI (163.64, above Fable 5's measured 161.55) and its measured AECI. With "show tested models only" on, derived points are hidden
   and the anchor reverts to the newest measured point.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold covers
@@ -314,8 +363,13 @@ lesswrong.com (+ wildcards). anthropic.com itself remains blocked at the
 gateway regardless of allowlist entries (platform special-casing), but the
 CDN host that actually serves the system-card PDFs, www-cdn.anthropic.com, is
 reachable — the Opus 5 card was pulled straight from it with curl, no manual
-upload needed. The PDFs are big (Opus 5 is 16 MB / 193 pages), which is over
-WebFetch's limit, so curl + pypdf rather than WebFetch. Substack bot-blocks
+upload needed, and so was the Fable 5.1 card (Sep 1 2026). The PDFs are big
+(Opus 5 is 16 MB / 193 pages, Fable 5.1 is 16 MB / 212 pages), which is over
+WebFetch's limit, so curl + pypdf rather than WebFetch. The system python's
+`cryptography` module is broken (pypdf/pdfplumber import fails); a throwaway
+venv with pypdf + pymupdf works. The AECI figure is a raster image: pull it
+out with pymupdf and digitize (dot centroids + whisker caps against the tick
+marks) rather than expecting a dataset behind it. Substack bot-blocks
 plain fetchers on
 /home/post/ URLs but its JSON API works: 
 `<publication>.substack.com/api/v1/posts/<slug>`.
@@ -330,8 +384,9 @@ plain fetchers on
   default fits).
 - ~~A validation ledger~~ — exists now: `ledger.csv` + `finance_data.py
   --ledger` (see "Validation ledger" above). The capability-side entries
-  (Mythos/Fable 5 at 61.3h/8.2h, Opus 5 at 71.4h/9.5h) are seeded as
-  event-based rows; extending `--ledger`-style automation to
+  (Mythos/Fable 5 at 61.3h/8.2h, Opus 5 at 71.4h/9.5h, plus the Sep 1 2026
+  re-predictions and Mythos 5.1 at 69.8h/9.3h) are seeded as event-based
+  rows; extending `--ledger`-style automation to
   `eci_conversions.py` is still open.
 - Opus 5's Epoch ECI landed on Aug 2 2026 (161.05, dated 2026-07-24) and
   replaced the imputed 164.2. It is the first prediction-only row with BOTH
