@@ -83,28 +83,31 @@ const M = M_RAW.map(m => ({ ...m, p: m.p/60, lo: m.lo/60, hi: m.hi/60, p80: m.p8
 // Conversion-fit constants (same fits as this script's report):
 // ln(TH_minutes) = a + b*score for the TH fits; AECI = a + b*ECI for eciAeci.
 const FITS = {
-  eciP50:   { a: -18.2534, b: 0.156844 },
-  eciP80:   { a: -19.5760, b: 0.154304 },
-  aeciP50:  { a: -22.2314, b: 0.188738 },
-  aeciP80:  { a: -23.2315, b: 0.182442 },
-  eciAeci:  { a: 2.7086, b: 0.973278 },
-  eciP50Lab: { b: 0.161136, anthropic: -18.6019, google: -19.1337, openai: -19.0240 },
-  eciP80Lab: { b: 0.154385, anthropic: -19.4746, google: -19.5314, openai: -19.6891 },
+  eciP50:   { a: -18.0119, b: 0.155188 },
+  eciP80:   { a: -19.3135, b: 0.152500 },
+  aeciP50:  { a: -20.1111, b: 0.172631 },
+  aeciP80:  { a: -21.2405, b: 0.167291 },
+  eciAeci:  { a: -9.2939, b: 1.064496 },
+  eciP50Lab: { b: 0.159213, anthropic: -18.3146, google: -18.8200, openai: -18.7569 },
+  eciP80Lab: { b: 0.152339, anthropic: -19.1708, google: -19.1996, openai: -19.4043 },
 };
 const PRED_RAW = [
-  { n: "DeepSeek-R1",     d: "2025-01-20", basis: "ECI 139.51 (pooled ECI fit; no deepseek METR data)", p: 37.633201, p80: 7.035259, l: "deepseek" },
-  { n: "Sonnet 4.5",      d: "2025-09-29", basis: "AECI 145.8", p: 197.688524, p80: 29.036189, l: "anthropic" },
-  { n: "Mythos Preview",  d: "2026-04-07", basis: "AECI 157.7", p: 1868.105369, p80: 254.577536, l: "anthropic" },
-  { n: "Opus 4.7",        d: "2026-04-16", basis: "ECI 156.04 (implied AECI 154.6)", p: 1036.519186, p80: 144.055616, l: "anthropic" },
-  { n: "GPT-5.5",         d: "2026-04-23", basis: "ECI 158.94 (openai lab-adjusted ECI fit)", p: 725.577038, p80: 127.588570, l: "openai" },
-  { n: "Opus 4.8",        d: "2026-05-28", basis: "ECI 157.84 (implied AECI 156.3)", p: 1442.704079, p80: 198.307756, l: "anthropic" },
-  { n: "Fable 5",         d: "2026-06-09", basis: "ECI 161.55 (implied AECI 159.9)", p: 2852.020476, p80: 383.214129, l: "anthropic" },
-  { n: "Mythos 5",        d: "2026-06-09", basis: "AECI 159.46", p: 2604.144949, p80: 350.971060, l: "anthropic" },
-  { n: "GLM-5.2",         d: "2026-06-16", basis: "ECI 152.13 (pooled ECI fit; no zai METR data)", p: 272.395539, p80: 49.316264, l: "zai" },
-  { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 161.69 (openai lab-adjusted ECI fit)", p: 1130.134027, p80: 195.071897, l: "openai" },
-  { n: "Kimi K3",         d: "2026-07-16", basis: "ECI 157.39 (pooled ECI fit; no moonshot METR data)", p: 621.573083, p80: 111.040407, l: "moonshot" },
-  { n: "Opus 5",          d: "2026-07-24", basis: "AECI 160.73", p: 3309.516796, p80: 442.484484, l: "anthropic" },
-  { n: "Mythos 5.1",      d: "2026-09-01", basis: "AECI 161.98", p: 4190.102666, p80: 555.827606, l: "anthropic" },
+  { n: "DeepSeek-R1",     d: "2025-01-20", basis: "ECI 138.97 (pooled ECI fit; no deepseek METR data)", p: 34.973147, p80: 6.550046, l: "deepseek" },
+  { n: "Sonnet 4.5",      d: "2025-09-29", basis: "AECI 146.8", p: 187.002887, p80: 27.601916, l: "anthropic" },
+  { n: "Mythos Preview",  d: "2026-04-07", basis: "AECI 161.88", p: 2526.026497, p80: 343.997836, l: "anthropic" },
+  { n: "Opus 4.7",        d: "2026-04-16", basis: "ECI 156.35 (implied AECI 157.1)", p: 1114.474312, p80: 155.661298, l: "anthropic" },
+  { n: "GPT-5.5",         d: "2026-04-23", basis: "ECI 159.22 (openai lab-adjusted ECI fit)", p: 729.900479, p80: 127.877096, l: "openai" },
+  { n: "Opus 4.8",        d: "2026-05-28", basis: "ECI 158.34 (implied AECI 159.3)", p: 1606.528455, p80: 221.863672, l: "anthropic" },
+  { n: "Fable 5",         d: "2026-06-09", basis: "ECI 162.22 (implied AECI 163.4)", p: 3277.512216, p80: 442.754872, l: "anthropic" },
+  { n: "Mythos 5",        d: "2026-06-09", basis: "AECI 164.49", p: 3963.846877, p80: 532.330856, l: "anthropic" },
+  { n: "GLM-5.2",         d: "2026-06-16", basis: "ECI 151.78 (pooled ECI fit; no zai METR data)", p: 255.325812, p80: 46.201033, l: "zai" },
+  { n: "GPT-5.6 Sol",     d: "2026-07-09", basis: "ECI 161.8 (openai lab-adjusted ECI fit)", p: 1100.672564, p80: 189.445969, l: "openai" },
+  { n: "Kimi K3",         d: "2026-07-16", basis: "ECI 157.61 (pooled ECI fit; no moonshot METR data)", p: 630.988216, p80: 112.401743, l: "moonshot" },
+  { n: "Opus 5",          d: "2026-07-24", basis: "AECI 165.18", p: 4465.273766, p80: 597.465225, l: "anthropic" },
+  { n: "Fable 5.1",       d: "2026-09-01", basis: "ECI 164.82 (implied AECI 166.2)", p: 5285.008539, p80: 703.470640, l: "anthropic" },
+  { n: "Mythos 5.1",      d: "2026-09-01", basis: "AECI 168.12", p: 7417.679712, p80: 977.044298, l: "anthropic" },
+  { n: "GPT-6 Astra",     d: "2026-09-03", basis: "ECI 166.51 (openai lab-adjusted ECI fit)", p: 2329.870635, p80: 388.238508, l: "openai" },
+  { n: "Opus 5.5",        d: "2026-09-22", basis: "AECI 169.36", p: 9188.282296, p80: 1202.277541, l: "anthropic" },
 ];
 // Hover copy for the prediction-basis buttons. Stats quoted here come from
 // analysis/eci_conversions.py's report and move only when the fits are
@@ -117,20 +120,20 @@ const BASIS_DOC = {
     + "through the lab-adjusted ECI fit. Labs with no METR result at all "
     + "(DeepSeek, Z.ai, Moonshot) have no intercept to use, so they fall back to "
     + "the pooled ECI fit. Anthropic models with a public ECI but no AECI in the "
-    + "current system-card vintage (Fable 5, Opus 4.7, Opus 4.8) have their ECI "
+    + "current system-card vintage (Fable 5, Fable 5.1, Opus 4.7, Opus 4.8) have their ECI "
     + "converted to an implied AECI first. Each "
     + "model's tooltip names the route it actually took."],
   aeci: ["AECI — Anthropic's internal index",
     "Puts every model through the AECI fit: ln(horizon) regressed on AECI over "
     + "the 7 Claude models that have both an AECI and a METR run (R²=0.998; the "
-    + "horizon doubles every 3.67 AECI points). Anthropic publishes AECI only for "
+    + "horizon doubles every 4.02 AECI points). Anthropic publishes AECI only for "
     + "its own models, so every non-Anthropic diamond here is a two-step "
     + "extrapolation — public ECI converted to an implied AECI through the fitted "
-    + "ECI↔AECI line (n=9 Claude pairs), then pushed through a Claude-only "
+    + "ECI↔AECI line (n=10 Claude pairs), then pushed through a Claude-only "
     + "curve. It is the most optimistic of the four for that reason."],
   eci: ["ECI pooled — one line for every lab",
     "A single cross-lab regression of ln(horizon) on Epoch's public ECI, over all "
-    + "20 models that have both (R²=0.970; doubles every 4.42 ECI points). Lab "
+    + "20 models that have both (R²=0.967; doubles every 4.47 ECI points). Lab "
     + "identity is ignored entirely. That is the honest choice when you don't "
     + "want per-lab assumptions, and also its weakness: Claude models have "
     + "historically sat about 1.5x above this line at equal ECI, so pooling "
@@ -138,7 +141,7 @@ const BASIS_DOC = {
     + "route available for labs with no METR-tested model."],
   lab: ["ECI lab-adj — per-lab intercepts",
     "The same ECI data as pooled, fitted as an ANCOVA: one shared slope, but a "
-    + "separate intercept per lab (R²=0.986, n=20). It keeps the cross-lab trend "
+    + "separate intercept per lab (R²=0.983, n=20). It keeps the cross-lab trend "
     + "while letting each lab sit at its own level — Anthropic's intercept is "
     + "~1.5x OpenAI's and ~1.7x Google's, meaning a Claude model at the same "
     + "public ECI has historically delivered around 1.5x the horizon. Only labs "
@@ -167,43 +170,46 @@ const PRED_BASES = {
 // ECI<->AECI line (eciImp/aeciImp mark imputed values). GENERATED alongside
 // PRED_RAW by --emit-js; verify with --check-html.
 const IDX_RAW = [
-  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 118.53, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
-  { n: "GPT-4",               d: "2023-03-14", eci: 125.68, aeci: 125.03, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
-  { n: "GPT-4 1106",          d: "2023-11-06", eci: 126.73, aeci: 126.05, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
-  { n: "3 Opus",              d: "2024-03-04", eci: 126.64, aeci: 125.9, aeciLo: 123.9, aeciHi: 126.9, p50: 3.952262, p80: 0.638973, l: "anthropic" },
-  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.26, aeci: 126.57, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
-  { n: "GPT-4o",              d: "2024-05-13", eci: 128.56, aeci: 127.83, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
+  { n: "GPT-3.5 Instruct",    d: "2022-03-15", eci: 119.0, aeci: 117.38, aeciImp: true, p50: 0.599247, p80: 0.25538, l: "openai" },
+  { n: "GPT-4",               d: "2023-03-14", eci: 125.89, aeci: 124.72, aeciImp: true, p50: 3.987428, p80: 0.889561, l: "openai" },
+  { n: "GPT-4 1106",          d: "2023-11-06", eci: 126.59, aeci: 125.46, eciEst: true, aeciEst: true, p50: 4.044959, p80: 0.783032, l: "openai" },
+  { n: "3 Opus",              d: "2024-03-04", eci: 126.91, aeci: 125.1, aeciLo: 120.8, aeciHi: 126.6, p50: 3.952262, p80: 0.638973, l: "anthropic" },
+  { n: "GPT-4 Turbo",         d: "2024-04-09", eci: 127.25, aeci: 126.16, aeciImp: true, p50: 3.732787, p80: 0.927933, l: "openai" },
+  { n: "GPT-4o",              d: "2024-05-13", eci: 128.97, aeci: 127.99, aeciImp: true, p50: 6.991195, p80: 1.267009, l: "openai" },
   { n: "Claude 3.5 Sonnet",   d: "2024-06-20", eci: 130.0, aeci: 130.0, aeciLo: 130.0, aeciHi: 130.0, p50: 11.395377, p80: 1.671757, l: "anthropic" },
-  { n: "o1-preview",          d: "2024-09-12", eci: 135.65, aeci: 134.73, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
-  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 134.22, aeci: 133.4, aeciLo: 131.9, aeciHi: 134.8, p50: 20.522872, p80: 2.595677, l: "anthropic" },
-  { n: "o1",                  d: "2024-12-05", eci: 142.52, aeci: 141.42, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
-  { n: "DeepSeek-R1",         d: "2025-01-20", eci: 139.51, aeci: 138.49, aeciImp: true, l: "deepseek" },
-  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.65, aeci: 139.6, aeciLo: 137.8, aeciHi: 141.8, p50: 60.388937, p80: 12.09179, l: "anthropic" },
-  { n: "o3",                  d: "2025-04-16", eci: 147.02, aeci: 145.8, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
-  { n: "Opus 4",              d: "2025-05-22", eci: 142.91, aeci: 142.1, aeciLo: 139.7, aeciHi: 144.3, p50: 100.366123, p80: 20.429752, l: "anthropic" },
-  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.21, aeci: 143.07, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
-  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 148.7, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
-  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.89, aeci: 145.8, aeciLo: 143.5, aeciHi: 148.6, l: "anthropic" },
-  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 153.12, aeci: 151.74, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
-  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 151.64, aeci: 150.3, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
-  { n: "Opus 4.5",            d: "2025-11-24", eci: 149.9, aeci: 148.1, aeciLo: 145.0, aeciHi: 150.5, p50: 292.994594, p80: 49.430584, l: "anthropic" },
-  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.47, aeci: 152.08, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
-  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 155.64, aeci: 154.19, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
-  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.12, aeci: 152.7, aeciLo: 151.2, aeciHi: 156.0, p50: 718.80683, p80: 69.874587, l: "anthropic" },
-  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.89, aeci: 153.46, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
-  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 156.08, aeci: 154.62, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
-  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.66, aeci: 155.18, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
-  { n: "Mythos Preview",      d: "2026-04-07", eci: 159.25, aeci: 157.7, eciImp: true, aeciLo: 154.9, aeciHi: 163.5, l: "anthropic" },
-  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.04, aeci: 154.58, aeciImp: true, l: "anthropic" },
-  { n: "GPT-5.5",             d: "2026-04-23", eci: 158.94, aeci: 157.4, aeciImp: true, l: "openai" },
-  { n: "Opus 4.8",            d: "2026-05-28", eci: 157.84, aeci: 156.33, aeciImp: true, l: "anthropic" },
-  { n: "Fable 5",             d: "2026-06-09", eci: 161.55, aeci: 159.94, aeciImp: true, l: "anthropic" },
-  { n: "Mythos 5",            d: "2026-06-09", eci: 161.06, aeci: 159.46, eciImp: true, aeciLo: 156.3, aeciHi: 165.46, l: "anthropic" },
-  { n: "GLM-5.2",             d: "2026-06-16", eci: 152.13, aeci: 150.77, aeciImp: true, l: "zai" },
-  { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 161.69, aeci: 160.08, aeciImp: true, l: "openai" },
-  { n: "Kimi K3",             d: "2026-07-16", eci: 157.39, aeci: 155.89, aeciImp: true, l: "moonshot" },
-  { n: "Opus 5",              d: "2026-07-24", eci: 161.05, aeci: 160.73, aeciLo: 157.35, aeciHi: 167.11, l: "anthropic" },
-  { n: "Mythos 5.1",          d: "2026-09-01", eci: 163.64, aeci: 161.98, eciImp: true, aeciLo: 158.2, aeciHi: 169.0, l: "anthropic" },
+  { n: "o1-preview",          d: "2024-09-12", eci: 134.78, aeci: 134.18, aeciImp: true, p50: 20.326586, p80: 4.420545, l: "openai" },
+  { n: "Claude 3.5S v2",      d: "2024-10-22", eci: 133.54, aeci: 133.5, aeciLo: 131.5, aeciHi: 135.4, p50: 20.522872, p80: 2.595677, l: "anthropic" },
+  { n: "o1",                  d: "2024-12-05", eci: 141.9, aeci: 141.76, aeciImp: true, p50: 38.831588, p80: 7.090121, l: "openai" },
+  { n: "DeepSeek-R1",         d: "2025-01-20", eci: 138.97, aeci: 138.64, aeciImp: true, l: "deepseek" },
+  { n: "Claude 3.7",          d: "2025-02-24", eci: 141.16, aeci: 140.4, aeciLo: 139.2, aeciHi: 142.8, p50: 60.388937, p80: 12.09179, l: "anthropic" },
+  { n: "o3",                  d: "2025-04-16", eci: 146.86, aeci: 147.04, aeciImp: true, p50: 119.732634, p80: 29.981603, l: "openai" },
+  { n: "Opus 4",              d: "2025-05-22", eci: 142.67, aeci: 143.4, aeciLo: 141.6, aeciHi: 145.3, p50: 100.366123, p80: 20.429752, l: "anthropic" },
+  { n: "Opus 4.1",            d: "2025-08-05", eci: 144.11, aeci: 144.11, aeciImp: true, p50: 100.472004, p80: 23.455761, l: "anthropic" },
+  { n: "GPT-5",               d: "2025-08-07", eci: 150.0, aeci: 150.38, aeciImp: true, p50: 203.012577, p80: 38.312431, l: "openai" },
+  { n: "Sonnet 4.5",          d: "2025-09-29", eci: 146.84, aeci: 146.8, aeciLo: 144.5, aeciHi: 149.6, l: "anthropic" },
+  { n: "Gemini 3 Pro",        d: "2025-11-18", eci: 152.95, aeci: 153.52, aeciImp: true, p50: 224.325884, p80: 54.142849, l: "google" },
+  { n: "GPT-5.1 Codex Max",   d: "2025-11-19", eci: 151.79, aeci: 152.29, eciEst: true, aeciEst: true, p50: 223.714694, p80: 50.632499, l: "openai" },
+  { n: "Opus 4.5",            d: "2025-11-24", eci: 150.1, aeci: 149.8, aeciLo: 147.5, aeciHi: 153.0, p50: 292.994594, p80: 49.430584, l: "anthropic" },
+  { n: "GPT-5.2",             d: "2025-12-11", eci: 153.49, aeci: 154.1, aeciImp: true, p50: 352.249302, p80: 66.002649, l: "openai" },
+  { n: "GPT-5.3 Codex",       d: "2026-02-05", eci: 156.82, aeci: 157.64, aeciImp: true, p50: 349.530732, p80: 54.739407, l: "openai" },
+  { n: "Opus 4.6",            d: "2026-02-05", eci: 155.31, aeci: 154.3, aeciLo: 151.6, aeciHi: 157.6, p50: 718.80683, p80: 69.874587, l: "anthropic" },
+  { n: "Gemini 3.1 Pro",      d: "2026-02-19", eci: 154.84, aeci: 155.53, aeciImp: true, p50: 384.147435, p80: 89.801503, l: "google" },
+  { n: "Mythos Preview (Early)", d: "2026-02-24", eci: 156.0, aeci: 156.77, eciEst: true, aeciEst: true, p50: 1044.780145, p80: 185.911829, l: "anthropic" },
+  { n: "GPT-5.4",             d: "2026-03-05", eci: 156.91, aeci: 157.74, aeciImp: true, p50: 341.735276, p80: 53.877851, l: "openai" },
+  { n: "Mythos Preview",      d: "2026-04-07", eci: 160.8, aeci: 161.88, eciImp: true, aeciLo: 158.3, aeciHi: 166.73, l: "anthropic" },
+  { n: "Opus 4.7",            d: "2026-04-16", eci: 156.35, aeci: 157.14, aeciImp: true, l: "anthropic" },
+  { n: "GPT-5.5",             d: "2026-04-23", eci: 159.22, aeci: 160.2, aeciImp: true, l: "openai" },
+  { n: "Opus 4.8",            d: "2026-05-28", eci: 158.34, aeci: 159.26, aeciImp: true, l: "anthropic" },
+  { n: "Fable 5",             d: "2026-06-09", eci: 162.22, aeci: 163.39, aeciImp: true, l: "anthropic" },
+  { n: "Mythos 5",            d: "2026-06-09", eci: 163.25, aeci: 164.49, eciImp: true, aeciLo: 160.63, aeciHi: 170.26, l: "anthropic" },
+  { n: "GLM-5.2",             d: "2026-06-16", eci: 151.78, aeci: 152.28, aeciImp: true, l: "zai" },
+  { n: "GPT-5.6 Sol",         d: "2026-07-09", eci: 161.8, aeci: 162.94, aeciImp: true, l: "openai" },
+  { n: "Kimi K3",             d: "2026-07-16", eci: 157.61, aeci: 158.48, aeciImp: true, l: "moonshot" },
+  { n: "Opus 5",              d: "2026-07-24", eci: 162.94, aeci: 165.18, aeciLo: 161.16, aeciHi: 171.11, l: "anthropic" },
+  { n: "Fable 5.1",           d: "2026-09-01", eci: 164.82, aeci: 166.16, aeciImp: true, l: "anthropic" },
+  { n: "Mythos 5.1",          d: "2026-09-01", eci: 166.66, aeci: 168.12, eciImp: true, aeciLo: 163.92, aeciHi: 174.99, l: "anthropic" },
+  { n: "GPT-6 Astra",         d: "2026-09-03", eci: 166.51, aeci: 167.96, aeciImp: true, l: "openai" },
+  { n: "Opus 5.5",            d: "2026-09-22", eci: 167.35, aeci: 169.36, aeciLo: 165.23, aeciHi: 177.05, l: "anthropic" },
 ];
 // ── One record per model for tooltips, merging M_RAW (measured horizons),
 // PRED_RAW (predicted horizons) and IDX_RAW (indices). Every model gets TH,
@@ -233,36 +239,102 @@ const INFO = (() => {
   return out;
 })();
 
-// Models that get permanent labels + offsets
-const LBL = {
-  "GPT-3.5 Instruct": { dx: 8, dy: -8 },
-  "GPT-4":    { dx: 8,  dy: -8 },
-  "GPT-4o":   { dx: 8,  dy: -10 },
-  "o1":       { dx: 8,  dy: -12 },
-  "o3":       { dx: 8,  dy: -10 },
-  "GPT-5":    { dx: 8,  dy: 5 },
-  "Opus 4.5": { dx: -8, dy: -12, a: "end" },
-  "GPT-5.2":  { dx: 8,  dy: 16 },
-  "Opus 4.6":  { dx: -8, dy: -12, a: "end" },
-  "GPT-5.3 Codex": { dx: 8, dy: 12 },
-  "Mythos Preview (Early)": { dx: -8, dy: -12, a: "end" },
-  // Mythos 5 sits above its dot rather than beside it (frees the crowded space
-  // to the right). Opus 5's dot is only ~5px away in every view, so the nudge
-  // left and the extra lift are what keep the two labels — and "Mythos
-  // Preview" just below-left — from colliding.
-  "Mythos 5": { dx: -9, dy: -13, a: "middle" },
-  "Fable 5":  { dx: 8, dy: 12 },
-  "Mythos Preview": { dx: -8, dy: -8, a: "end" },
-  "GPT-5.6 Sol": { dx: 8, dy: 14 },
-  "DeepSeek-R1": { dx: 8, dy: 14 },
-  "GLM-5.2": { dx: 8, dy: 14 },
-  "Kimi K3": { dx: 10, dy: 8 },
-  "Opus 5": { dx: 8, dy: -11 },
-  "Mythos 5.1": { dx: 8, dy: -14 },
+// Models eligible for a permanent label (everything else labels on hover).
+const LBL = new Set([
+  "GPT-3.5 Instruct", "GPT-4", "GPT-4o", "o1", "o3", "GPT-5", "Opus 4.5",
+  "GPT-5.2", "Opus 4.6", "GPT-5.3 Codex", "Mythos Preview (Early)",
+  "Mythos Preview", "Mythos 5", "Fable 5", "GPT-5.6 Sol", "DeepSeek-R1",
+  "GLM-5.2", "Kimi K3", "Opus 5", "Mythos 5.1", "Fable 5.1", "GPT-6 Astra",
+  "Opus 5.5",
+]);
+
+// ── Permanent-label placement ──
+// One rule in every view instead of hand-tuned per-model offsets (which went
+// stale each time a model landed nearby). For each label, in order, take the
+// first spot whose text box clears the plot edge, every dot and every label
+// already placed:
+//   1. a ring of spots touching the dot, provided no other dot sits nearer the
+//      label than its own (so it can't be read as a neighbour's);
+//   2. a wider ring, drawn with a thin leader line back to the dot (the line
+//      may not cross another dot or label, and no later label may cover it);
+//   3. otherwise the label is hover-only.
+// Order: frontier points first, then newest first (same day: higher point
+// first), so the crowded leading edge keeps its newest names and the frontier
+// keeps its own.
+const LBL_CLOSE = [
+  { dx: 8,  dy: -7,  a: "start" },  // upper-right
+  { dx: 9,  dy: 4,   a: "start" },  // right
+  { dx: 8,  dy: 15,  a: "start" },  // lower-right
+  { dx: -8, dy: -7,  a: "end" },    // upper-left
+  { dx: -9, dy: 4,   a: "end" },    // left
+  { dx: -8, dy: 15,  a: "end" },    // lower-left
+  { dx: 0,  dy: -11, a: "middle" }, // above
+  { dx: 0,  dy: 19,  a: "middle" }, // below
+];
+const LBL_FAR = [24, 40].flatMap(r => [
+  { dx: r,  dy: 4,          a: "start" },
+  { dx: -r, dy: 4,          a: "end" },
+  { dx: r * 0.7,  dy: -r * 0.7, a: "start" },
+  { dx: r * 0.7,  dy: r * 0.7 + 8, a: "start" },
+  { dx: -r * 0.7, dy: -r * 0.7, a: "end" },
+  { dx: -r * 0.7, dy: r * 0.7 + 8, a: "end" },
+  { dx: 0,  dy: -r,         a: "middle" },
+  { dx: 0,  dy: r + 8,      a: "middle" },
+].map(p => ({ ...p, lead: true })));
+let measureCtx = null;
+const labelW = (text, italic) => {
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  measureCtx.font = `${italic ? "italic " : ""}500 11px ${FONT}`;
+  return measureCtx.measureText(text).width;
 };
-// Permanent labels suppressed in the (crowded) time-horizon view only;
-// score modes still show them.
-const LBL_TH_HIDE = new Set(["Fable 5", "GPT-5.6 Sol", "GPT-5.3 Codex"]);
+// Sort key: frontier first, then newest; same-day ties go to the higher point.
+const labelRank = (frontier, ts) => [frontier ? 0 : 1, -ts];
+const byRank = (a, b) => (a.rank[0] - b.rank[0]) || (a.rank[1] - b.rank[1]) || (a.cy - b.cy);
+// items: { key, cx, cy, text, italic, want, rank }; bounds: plot-area pixels.
+// Returns Map key -> placement {dx, dy, a, lead?, lx, ly} for labels that fit
+// (lx/ly: the label-box point nearest the dot, where a leader line ends).
+function placeLabels(items, bounds) {
+  const DOT_R = 7, ASC = 9, DESC = 3, PAD = 1;
+  const boxes = [], leads = [], out = new Map();
+  const inBox = (x, y, b) => x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1;
+  // points sampled along a leader segment (dense enough for 11px text)
+  const along = (x1, y1, x2, y2) => Array.from({ length: 13 }, (_, i) =>
+    [x1 + (x2 - x1) * i / 12, y1 + (y2 - y1) * i / 12]);
+  const near = (o, b) => [Math.min(Math.max(o.cx, b.x0), b.x1), Math.min(Math.max(o.cy, b.y0), b.y1)];
+  const gap = (o, b) => { const [x, y] = near(o, b); return Math.hypot(x - o.cx, y - o.cy); };
+  const clear = b =>
+    b.x0 >= bounds.x0 && b.x1 <= bounds.x1 && b.y0 >= bounds.y0 && b.y1 <= bounds.y1
+    && !items.some(o => o.cx + DOT_R > b.x0 && o.cx - DOT_R < b.x1 && o.cy + DOT_R > b.y0 && o.cy - DOT_R < b.y1)
+    && !boxes.some(o => o.x0 < b.x1 && o.x1 > b.x0 && o.y0 < b.y1 && o.y1 > b.y0)
+    && !leads.some(pts => pts.some(([x, y]) => inBox(x, y, b)));
+  for (const it of items.filter(i => i.want).sort(byRank)) {
+    const w = labelW(it.text, it.italic);
+    for (const p of [...LBL_CLOSE, ...LBL_FAR]) {
+      const x = it.cx + p.dx, y = it.cy + p.dy;
+      const x0 = p.a === "start" ? x : p.a === "end" ? x - w : x - w / 2;
+      const b = { x0: x0 - PAD, x1: x0 + w + PAD, y0: y - ASC - PAD, y1: y + DESC + PAD };
+      if (!clear(b)) continue;
+      if (!p.lead && items.some(o => o !== it && gap(o, b) < gap(it, b))) continue;
+      const [lx, ly] = near(it, b);
+      // a leader line may not run through another dot or label
+      const pts = p.lead ? along(it.cx, it.cy, lx, ly).slice(2) : [];
+      if (pts.some(([x, y]) => boxes.some(o => inBox(x, y, o))
+          || items.some(o => o !== it && Math.hypot(x - o.cx, y - o.cy) < DOT_R))) continue;
+      boxes.push(b); if (p.lead) leads.push(pts);
+      out.set(it.key, { ...p, lx: lx - it.cx, ly: ly - it.cy });
+      break;
+    }
+  }
+  return out;
+}
+const LBL_DEFAULT = LBL_CLOSE[0]; // hover-only labels show upper-right
+// Leader line from the dot's edge to its label, for labels placed off the ring.
+const Leader = ({ cx, cy, lp, c }) => {
+  if (!lp.lead) return null;
+  const d = Math.hypot(lp.lx, lp.ly) || 1;
+  return <line className="ml" x1={cx + lp.lx / d * 6} y1={cy + lp.ly / d * 6}
+    x2={cx + lp.lx} y2={cy + lp.ly} stroke={c} strokeWidth={0.75} opacity={0.6}/>;
+};
 
 // ── Trend fits ──
 const DAY_MS = 86400000;
@@ -1335,15 +1407,19 @@ function App() {
     const positions = [];
     if (isScore) {
       // ── Score mode: index points; imputed values are dashed diamonds. ──
+      const place = placeLabels(idxModels.map(m => ({
+        key: "idx"+m.n+m.d, cx: xS(m.ts), cy: yS(m.sc), text: m.n,
+        want: LBL.has(m.n), rank: labelRank(isIdxFrontier(m), m.ts),
+      })).filter(i => !isNaN(i.cx) && !isNaN(i.cy)), { x0: px0, x1: px1, y0: py0, y1: py1 });
       const sels = idxModels.map(m => {
         const cx=xS(m.ts), cy=yS(m.sc);
-        const c=COL[m.l], lb=LBL[m.n];
+        const c=COL[m.l], lb=place.get("idx"+m.n+m.d), lp=lb||LBL_DEFAULT;
         if (isNaN(cx)||isNaN(cy)) return null;
         if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
         const onFrontier = isIdxFrontier(m);
         const hasCI = m.lo != null && m.hi != null && m.hi > m.lo;
         const ct = hasCI ? yS(m.hi) : null, cb = hasCI ? yS(m.lo) : null;
-        return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`}>
+        return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
           {hasCI && <>
             <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
             <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
@@ -1354,8 +1430,9 @@ function App() {
                 fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
             : <circle cx={cx} cy={cy} r={5} fill={onFrontier?c:"#12121f"}
                 stroke={onFrontier?undefined:c} strokeWidth={onFrontier?undefined:2}/>}
-          <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
-            fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+          {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+          <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c}
+            fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lp.a}>{m.n}</text>
         </g>);
       });
       dotPositions.current = positions;
@@ -1365,9 +1442,16 @@ function App() {
       </g>);
     }
     const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
+    const predVis = testedOnly ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE);
+    const place = placeLabels([
+      ...vis.map(m => ({ key: m.n+m.d, cx: xS(m.ts), cy: yS(m.p), text: m.n,
+        want: LBL.has(m.n), rank: labelRank(isSota(m), m.ts) })),
+      ...predVis.map(m => ({ key: "pred"+m.n, cx: xS(m.ts), cy: yS(m.p), text: m.n, italic: true,
+        want: LBL.has(m.n), rank: labelRank(false, m.ts) })),
+    ].filter(i => !isNaN(i.cx) && !isNaN(i.cy)), { x0: px0, x1: px1, y0: py0, y1: py1 });
     const els = vis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
+      const c=COL[m.l], lb=place.get(m.n+m.d), lp=lb||LBL_DEFAULT;
       if (isNaN(cx)||isNaN(cy)) return null;
       // Only register hover targets for dots whose center is inside the plot area.
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
@@ -1375,7 +1459,7 @@ function App() {
       const ct = hasCI ? yS(Math.min(m.hi,yhiDyn)) : null;
       const cb = hasCI ? yS(Math.max(m.lo,YLO)) : null;
       const isOverlay = !isSota(m); // hollow if not SOTA in the active horizon
-      return (<g key={m.n+m.d} className={`mp${lb?' al':''}`}>
+      return (<g key={m.n+m.d} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
         {hasCI && <>
           <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
           <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
@@ -1383,21 +1467,23 @@ function App() {
         </>}
         <circle cx={cx} cy={cy} r={5} fill={isOverlay?"#12121f":c}
           stroke={isOverlay?c:undefined} strokeWidth={isOverlay?2:undefined}/>
-        <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
-          fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+        {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+        <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c}
+          fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lp.a}>{m.n}</text>
       </g>);
     });
     // Predicted horizons (AECI conversions): dashed hollow diamonds.
-    const pels = testedOnly ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE).map(m => {
+    const pels = predVis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
+      const c=COL[m.l], lb=place.get("pred"+m.n), lp=lb||LBL_DEFAULT;
       if (isNaN(cx)||isNaN(cy)) return null;
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
-      return (<g key={"pred"+m.n} className={`mp${lb?' al':''}`}>
+      return (<g key={"pred"+m.n} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
         <path d={`M ${cx} ${cy-6} L ${cx+6} ${cy} L ${cx} ${cy+6} L ${cx-6} ${cy} Z`}
           fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
-        <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c} opacity={0.85}
-          fontSize={11} fontFamily={FONT} fontWeight={500} fontStyle="italic" textAnchor={lb?.a||"start"}>{m.n}</text>
+        {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+        <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c} opacity={0.85}
+          fontSize={11} fontFamily={FONT} fontWeight={500} fontStyle="italic" textAnchor={lp.a}>{m.n}</text>
       </g>);
     });
     dotPositions.current = positions;

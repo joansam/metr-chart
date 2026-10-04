@@ -38,6 +38,29 @@ const LOCAL = {
     const have = new Set([...document.querySelectorAll('text')].map(t => t.textContent));
     return ns.filter(n => !have.has(n));
   }, names);
+  // Screen position of a model's dot (its <g> carries data-cx/cy in SVG
+  // user space), independent of where the label placer put its label.
+  const dotOf = name => page.evaluate(n => {
+    const g = document.querySelector(`g[data-n="${n}"]`);
+    if (!g) return null;
+    const svg = g.ownerSVGElement, pt = svg.createSVGPoint();
+    pt.x = +g.dataset.cx; pt.y = +g.dataset.cy;
+    const p = pt.matrixTransform(svg.getScreenCTM());
+    return { x: p.x, y: p.y };
+  }, name);
+  // Permanently shown labels must never overlap one another.
+  const labelOverlaps = () => page.evaluate(() => {
+    const rs = [...document.querySelectorAll('g.mp.al > text.ml')]
+      .map(t => ({ n: t.textContent, r: t.getBoundingClientRect() }));
+    const hits = [];
+    for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+      const a = rs[i].r, b = rs[j].r;
+      if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1)
+        hits.push(`${rs[i].n} / ${rs[j].n}`);
+    }
+    return hits;
+  });
+  for (const h of await labelOverlaps()) failures.push(`TH view: labels overlap (${h})`);
   const OPEN_MODELS = ['DeepSeek-R1', 'GLM-5.2', 'Kimi K3'];
   // open-weights reference diamonds render in the TH view
   for (const n of await labelsPresent(OPEN_MODELS))
@@ -61,16 +84,12 @@ const LOCAL = {
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: 'chart_eci.png' });
+  for (const h of await labelOverlaps()) failures.push(`ECI view: labels overlap (${h})`);
   // open-weights models carry a public ECI, so they appear in score mode too
   for (const n of await labelsPresent(OPEN_MODELS))
     failures.push(`ECI view: missing ${n}`);
   // hover Opus 4.6 in ECI mode: tooltip should show the METR horizons line
-  const o46 = await page.evaluate(() => {
-    const t = [...document.querySelectorAll('text')].find(el => el.textContent === 'Opus 4.6');
-    if (!t) return null;
-    const r = t.getBoundingClientRect();
-    return { x: r.right + 8, y: r.top + r.height / 2 + 12 };
-  });
+  const o46 = await dotOf('Opus 4.6');
   if (o46) {
     await page.mouse.move(o46.x, o46.y);
     await page.waitForTimeout(600);
@@ -89,17 +108,12 @@ const LOCAL = {
   await page.getByRole('button', { name: 'AECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: 'chart_aeci.png' });
+  for (const h of await labelOverlaps()) failures.push(`AECI view: labels overlap (${h})`);
   await page.getByRole('button', { name: 'Time horizon' }).click();
   await page.waitForTimeout(800);
 
-  // hover a measured dot in TH mode to check the new index line (Opus 4.6:
-  // label is end-anchored at (cx-8, cy-12), so the dot sits right+below it)
-  const opus = await page.evaluate(() => {
-    const t = [...document.querySelectorAll('text')].find(el => el.textContent === 'Opus 4.6');
-    if (!t) return null;
-    const r = t.getBoundingClientRect();
-    return { x: r.right + 8, y: r.top + r.height / 2 + 12 };
-  });
+  // hover a measured dot in TH mode to check the new index line
+  const opus = await dotOf('Opus 4.6');
   if (opus) {
     await page.mouse.move(opus.x, opus.y);
     await page.waitForTimeout(600);
@@ -107,15 +121,7 @@ const LOCAL = {
   }
 
   // hover the Mythos/Fable 5 prediction: find its registered dot position
-  const pos = await page.evaluate(() => {
-    const svg = document.querySelector('svg');
-    if (!svg) return null;
-    const texts = [...document.querySelectorAll('text')];
-    const t = texts.find(el => el.textContent === 'Mythos 5');
-    if (!t) return null;
-    const r = t.getBoundingClientRect();
-    return { x: r.left - 14, y: r.top + r.height / 2 + 8 };
-  });
+  const pos = await dotOf('Mythos 5');
   if (pos) {
     await page.mouse.move(pos.x, pos.y);
     await page.waitForTimeout(600);
@@ -128,12 +134,7 @@ const LOCAL = {
   await page.getByRole('button', { name: 'ECI pooled' }).click();
   await page.waitForTimeout(600);
   if (pos) {
-    const p2 = await page.evaluate(() => {
-      const t = [...document.querySelectorAll('text')].find(el => el.textContent === 'Mythos 5');
-      if (!t) return null;
-      const r = t.getBoundingClientRect();
-      return { x: r.left - 14, y: r.top + r.height / 2 + 8 };
-    });
+    const p2 = await dotOf('Mythos 5');
     if (p2) { await page.mouse.move(p2.x, p2.y); await page.waitForTimeout(600); }
   }
   await page.screenshot({ path: 'chart_basis_eci.png' });
@@ -289,8 +290,9 @@ const LOCAL = {
 
   // "Trend from <last frontier point>" on the main chart's trend tooltips.
   // Re-enable derived points first: the anchor may be predicted/imputed (the
-  // deliberate special case), so with everything shown TH anchors on Mythos
-  // 5.1's predicted horizon and ECI on Mythos 5.1's imputed score.
+  // deliberate special case), so with everything shown TH anchors on Opus
+  // 5.5's predicted horizon. On ECI Opus 5.5 is measured and newest, so it
+  // anchors there too (Mythos 5.1's imputed 166.66 sits just behind it).
   await page.getByText('Show tested models only').click();
   await page.waitForTimeout(600);
   await page.getByText('METR Time Horizon Trends').scrollIntoViewIfNeeded();
@@ -298,15 +300,15 @@ const LOCAL = {
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300); // extrapolation region, right of every dot
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.1')))
-    failures.push('TH tooltip: anchored-trend reading missing (want predicted Mythos 5.1 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Opus 5.5')))
+    failures.push('TH tooltip: anchored-trend reading missing (want predicted Opus 5.5 anchor)');
   await page.screenshot({ path: 'chart_th_anchored.png' });
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300);
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.1')))
-    failures.push('ECI tooltip: anchored-trend reading missing (want imputed Mythos 5.1 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Opus 5.5')))
+    failures.push('ECI tooltip: anchored-trend reading missing (want measured Opus 5.5 anchor)');
 
   // ── Mobile: pinch zoom must stay continuous across a multi-step gesture ──
   // (regression test for the one-step-pinch bug: gesture state used to reset
