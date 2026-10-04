@@ -15,8 +15,9 @@ Data sources:
     - Public ECI: analysis/data/eci_scores.csv, the
       epoch_capabilities_index/eci_scores.csv member of Epoch AI's
       benchmark_data.zip (https://epoch.ai/benchmarks, CC-BY 4.0), one row per
-      model keyed by Epoch's model name. METR Time Horizons is NOT among the
-      benchmarks that feed the ECI, so fit 2 is not circular.
+      model keyed by Epoch's model name. Epoch's ECI DOES include METR Time
+      Horizons as one of ~60 input benchmarks, so fit 2 is slightly circular;
+      the measured effect is <2% on any prediction (see analysis/NOTES.md).
     - AECI: analysis/data/aeci_systemcards.csv - one vintage only: the
       "Anthropic ECI over time" chart in the Claude Opus 5.5 system card
       (Sep 22 2026), Table 2.3.5.3.A + Figure 2.3.5.3.B. Five points (Mythos

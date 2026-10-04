@@ -16,8 +16,10 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   CC-BY 4.0, cite epoch.ai/benchmarks), copied verbatim from the
   `epoch_capabilities_index/eci_scores.csv` member of
   `https://epoch.ai/data/benchmark_data.zip` (the "LLM Benchmark Data" link on
-  epoch.ai/benchmarks/use-this-data). METR Time Horizons is NOT among the
-  benchmarks feeding the ECI, so TH-on-ECI fits aren't circular.
+  epoch.ai/benchmarks/use-this-data). **METR Time Horizons IS one of the
+  ECI's inputs** (`in_eci=True` in the zip's `benchmark_metadata.csv`; the
+  earlier claim here that it wasn't was wrong, or became wrong) — see
+  "METR inside the ECI" below for what that does to the fits.
   **Format change (by Oct 2026):** the zip used to carry a flat
   `epoch_capabilities_index.csv` with one row per model *version*
   (`claude-opus-4-6`, `gpt-5.4-2026-03-05`, effort variants like `_high`);
@@ -228,6 +230,28 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
     all join — Astra is a measured ECI record on its Sep 3 date). The card's own historical fit is 14.7/yr plus a one-time
     +5.9 jump at Mythos Preview — the chart's uniform running-max OLS reads
     that jump as slope.
+- **METR inside the ECI (checked Oct 4 2026): measured, small, left alone.**
+  Epoch's index takes METR Time Horizons' average task score as one of its
+  60 benchmarks, so every METR-tested model's public ECI partly encodes the
+  very result the ECI->TH fits regress on. How much it matters, measured
+  from the zip's own files: re-solving each model's ECI from
+  `processed_data_for_eci.csv` with Epoch's published benchmark difficulties
+  and slopes (`edi_scores.csv`) reproduces the published scores to a mean
+  0.03 points; dropping the METR row moves the METR-tested models by
+  -0.24 to +0.34 points (GPT-5.3 Codex, which has only 4 benchmarks; most
+  move <0.1). Refitting the conversion on those METR-free ECIs changes no
+  prediction by more than 2% (GPT-6 Astra 38.8 h -> 38.1 h; Claude AECI
+  routes 0%) and the pooled R² 0.967 -> 0.965. Replacing Epoch's published
+  scores with our own re-derivation would be a new derived quantity for a
+  ~1% effect, so the published ECI stays. Re-check on refreshes: if METR's
+  weight in the index grows (it is 1 of 4–30 benchmarks per model today),
+  this can stop being negligible.
+- **METR-tested models still without an ECI.** GPT-4 1106 and GPT-5.1 Codex
+  Max stay "estimated from TH". Codex Max has no row in the Oct 4 file
+  (the Aug 2 one had 149.96). Epoch's "GPT-4 Turbo (Nov 2023)" (126.47)
+  pools three API versions — 1106-preview, 0125-preview and gpt-4-turbo —
+  so equating it with METR's 1106 run is a judgement call; measured effect
+  of making it anyway: n 20 -> 21, at most 1.4% on any prediction. Not done.
 - **Kimi K3 counts as open weights, ahead of the data**: Epoch lists K3 as
   *API access* — Moonshot shipped K2.x as open weights but had not released
   K3's at the Jul 24 2026 snapshot. It is grouped with the open-weights markers
@@ -275,6 +299,18 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   ROUNDED figure, so the larger unit never prints "1.x" and the smaller never
   prints a boundary value — that is what keeps "24 months" from appearing.
   Before this the ladder stepped at 1x every rung except months->years.
+- **Permanent labels are placed by one rule, not per-model offsets.** The
+  hand-tuned `{dx, dy}` per model went stale every time a model landed
+  nearby (by the Opus 5.5 update, 1–6 label pairs overlapped per view, 6 at
+  phone width). `placeLabels` now tries, for each label in order: a ring of
+  spots touching the dot (only if no other dot is nearer the label than its
+  own, so it can't be misread as a neighbour's); then a wider ring drawn
+  with a thin leader line (which may not cross another dot or label); else
+  the label is hover-only. Order: frontier points first, then newest, then
+  the higher point on a same-day tie. `LBL` is just the set of names
+  eligible for a permanent label. Which names survive depends on width —
+  e.g. at 1100px Fable 5.1 and Opus 5 are hover-only in the TH view. The
+  render test asserts zero overlapping permanent labels in all three views.
 - **Responsive sizing**: the shell grows into the viewport (`SHELL_W`) instead
   of the old fixed 900px, and `CHART_HEIGHT` is 5/8 of viewport height (floor
   540, ceiling 950). Height is deliberately NOT "whatever is left after the

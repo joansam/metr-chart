@@ -239,38 +239,102 @@ const INFO = (() => {
   return out;
 })();
 
-// Models that get permanent labels + offsets
-const LBL = {
-  "GPT-3.5 Instruct": { dx: 8, dy: -8 },
-  "GPT-4":    { dx: 8,  dy: -8 },
-  "GPT-4o":   { dx: 8,  dy: -10 },
-  "o1":       { dx: 8,  dy: -12 },
-  "o3":       { dx: 8,  dy: -10 },
-  "GPT-5":    { dx: 8,  dy: 5 },
-  "Opus 4.5": { dx: -8, dy: -12, a: "end" },
-  "GPT-5.2":  { dx: 8,  dy: 16 },
-  "Opus 4.6":  { dx: -8, dy: -12, a: "end" },
-  "GPT-5.3 Codex": { dx: 8, dy: 12 },
-  "Mythos Preview (Early)": { dx: -8, dy: -12, a: "end" },
-  // Mythos 5 sits above its dot rather than beside it (frees the crowded space
-  // to the right). Opus 5's dot is only ~5px away in every view, so the nudge
-  // left and the extra lift are what keep the two labels — and "Mythos
-  // Preview" just below-left — from colliding.
-  "Mythos 5": { dx: -9, dy: -13, a: "middle" },
-  "Fable 5":  { dx: -8, dy: 14, a: "end" },
-  "Mythos Preview": { dx: -8, dy: -8, a: "end" },
-  "GPT-5.6 Sol": { dx: 8, dy: 14 },
-  "DeepSeek-R1": { dx: 8, dy: 14 },
-  "GLM-5.2": { dx: 8, dy: 14 },
-  "Kimi K3": { dx: 10, dy: 8 },
-  "Opus 5": { dx: 0, dy: 17, a: "middle" },
-  "Mythos 5.1": { dx: -8, dy: -10, a: "end" },
-  "Opus 5.5": { dx: 9, dy: -8 },
-  "GPT-6 Astra": { dx: 9, dy: 14 },
+// Models eligible for a permanent label (everything else labels on hover).
+const LBL = new Set([
+  "GPT-3.5 Instruct", "GPT-4", "GPT-4o", "o1", "o3", "GPT-5", "Opus 4.5",
+  "GPT-5.2", "Opus 4.6", "GPT-5.3 Codex", "Mythos Preview (Early)",
+  "Mythos Preview", "Mythos 5", "Fable 5", "GPT-5.6 Sol", "DeepSeek-R1",
+  "GLM-5.2", "Kimi K3", "Opus 5", "Mythos 5.1", "Fable 5.1", "GPT-6 Astra",
+  "Opus 5.5",
+]);
+
+// ── Permanent-label placement ──
+// One rule in every view instead of hand-tuned per-model offsets (which went
+// stale each time a model landed nearby). For each label, in order, take the
+// first spot whose text box clears the plot edge, every dot and every label
+// already placed:
+//   1. a ring of spots touching the dot, provided no other dot sits nearer the
+//      label than its own (so it can't be read as a neighbour's);
+//   2. a wider ring, drawn with a thin leader line back to the dot (the line
+//      may not cross another dot or label, and no later label may cover it);
+//   3. otherwise the label is hover-only.
+// Order: frontier points first, then newest first (same day: higher point
+// first), so the crowded leading edge keeps its newest names and the frontier
+// keeps its own.
+const LBL_CLOSE = [
+  { dx: 8,  dy: -7,  a: "start" },  // upper-right
+  { dx: 9,  dy: 4,   a: "start" },  // right
+  { dx: 8,  dy: 15,  a: "start" },  // lower-right
+  { dx: -8, dy: -7,  a: "end" },    // upper-left
+  { dx: -9, dy: 4,   a: "end" },    // left
+  { dx: -8, dy: 15,  a: "end" },    // lower-left
+  { dx: 0,  dy: -11, a: "middle" }, // above
+  { dx: 0,  dy: 19,  a: "middle" }, // below
+];
+const LBL_FAR = [24, 40].flatMap(r => [
+  { dx: r,  dy: 4,          a: "start" },
+  { dx: -r, dy: 4,          a: "end" },
+  { dx: r * 0.7,  dy: -r * 0.7, a: "start" },
+  { dx: r * 0.7,  dy: r * 0.7 + 8, a: "start" },
+  { dx: -r * 0.7, dy: -r * 0.7, a: "end" },
+  { dx: -r * 0.7, dy: r * 0.7 + 8, a: "end" },
+  { dx: 0,  dy: -r,         a: "middle" },
+  { dx: 0,  dy: r + 8,      a: "middle" },
+].map(p => ({ ...p, lead: true })));
+let measureCtx = null;
+const labelW = (text, italic) => {
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  measureCtx.font = `${italic ? "italic " : ""}500 11px ${FONT}`;
+  return measureCtx.measureText(text).width;
 };
-// Permanent labels suppressed in the (crowded) time-horizon view only;
-// score modes still show them.
-const LBL_TH_HIDE = new Set(["Fable 5", "GPT-5.6 Sol", "GPT-5.3 Codex"]);
+// Sort key: frontier first, then newest; same-day ties go to the higher point.
+const labelRank = (frontier, ts) => [frontier ? 0 : 1, -ts];
+const byRank = (a, b) => (a.rank[0] - b.rank[0]) || (a.rank[1] - b.rank[1]) || (a.cy - b.cy);
+// items: { key, cx, cy, text, italic, want, rank }; bounds: plot-area pixels.
+// Returns Map key -> placement {dx, dy, a, lead?, lx, ly} for labels that fit
+// (lx/ly: the label-box point nearest the dot, where a leader line ends).
+function placeLabels(items, bounds) {
+  const DOT_R = 7, ASC = 9, DESC = 3, PAD = 1;
+  const boxes = [], leads = [], out = new Map();
+  const inBox = (x, y, b) => x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1;
+  // points sampled along a leader segment (dense enough for 11px text)
+  const along = (x1, y1, x2, y2) => Array.from({ length: 13 }, (_, i) =>
+    [x1 + (x2 - x1) * i / 12, y1 + (y2 - y1) * i / 12]);
+  const near = (o, b) => [Math.min(Math.max(o.cx, b.x0), b.x1), Math.min(Math.max(o.cy, b.y0), b.y1)];
+  const gap = (o, b) => { const [x, y] = near(o, b); return Math.hypot(x - o.cx, y - o.cy); };
+  const clear = b =>
+    b.x0 >= bounds.x0 && b.x1 <= bounds.x1 && b.y0 >= bounds.y0 && b.y1 <= bounds.y1
+    && !items.some(o => o.cx + DOT_R > b.x0 && o.cx - DOT_R < b.x1 && o.cy + DOT_R > b.y0 && o.cy - DOT_R < b.y1)
+    && !boxes.some(o => o.x0 < b.x1 && o.x1 > b.x0 && o.y0 < b.y1 && o.y1 > b.y0)
+    && !leads.some(pts => pts.some(([x, y]) => inBox(x, y, b)));
+  for (const it of items.filter(i => i.want).sort(byRank)) {
+    const w = labelW(it.text, it.italic);
+    for (const p of [...LBL_CLOSE, ...LBL_FAR]) {
+      const x = it.cx + p.dx, y = it.cy + p.dy;
+      const x0 = p.a === "start" ? x : p.a === "end" ? x - w : x - w / 2;
+      const b = { x0: x0 - PAD, x1: x0 + w + PAD, y0: y - ASC - PAD, y1: y + DESC + PAD };
+      if (!clear(b)) continue;
+      if (!p.lead && items.some(o => o !== it && gap(o, b) < gap(it, b))) continue;
+      const [lx, ly] = near(it, b);
+      // a leader line may not run through another dot or label
+      const pts = p.lead ? along(it.cx, it.cy, lx, ly).slice(2) : [];
+      if (pts.some(([x, y]) => boxes.some(o => inBox(x, y, o))
+          || items.some(o => o !== it && Math.hypot(x - o.cx, y - o.cy) < DOT_R))) continue;
+      boxes.push(b); if (p.lead) leads.push(pts);
+      out.set(it.key, { ...p, lx: lx - it.cx, ly: ly - it.cy });
+      break;
+    }
+  }
+  return out;
+}
+const LBL_DEFAULT = LBL_CLOSE[0]; // hover-only labels show upper-right
+// Leader line from the dot's edge to its label, for labels placed off the ring.
+const Leader = ({ cx, cy, lp, c }) => {
+  if (!lp.lead) return null;
+  const d = Math.hypot(lp.lx, lp.ly) || 1;
+  return <line className="ml" x1={cx + lp.lx / d * 6} y1={cy + lp.ly / d * 6}
+    x2={cx + lp.lx} y2={cy + lp.ly} stroke={c} strokeWidth={0.75} opacity={0.6}/>;
+};
 
 // ── Trend fits ──
 const DAY_MS = 86400000;
@@ -1343,15 +1407,19 @@ function App() {
     const positions = [];
     if (isScore) {
       // ── Score mode: index points; imputed values are dashed diamonds. ──
+      const place = placeLabels(idxModels.map(m => ({
+        key: "idx"+m.n+m.d, cx: xS(m.ts), cy: yS(m.sc), text: m.n,
+        want: LBL.has(m.n), rank: labelRank(isIdxFrontier(m), m.ts),
+      })).filter(i => !isNaN(i.cx) && !isNaN(i.cy)), { x0: px0, x1: px1, y0: py0, y1: py1 });
       const sels = idxModels.map(m => {
         const cx=xS(m.ts), cy=yS(m.sc);
-        const c=COL[m.l], lb=LBL[m.n];
+        const c=COL[m.l], lb=place.get("idx"+m.n+m.d), lp=lb||LBL_DEFAULT;
         if (isNaN(cx)||isNaN(cy)) return null;
         if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
         const onFrontier = isIdxFrontier(m);
         const hasCI = m.lo != null && m.hi != null && m.hi > m.lo;
         const ct = hasCI ? yS(m.hi) : null, cb = hasCI ? yS(m.lo) : null;
-        return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`}>
+        return (<g key={"idx"+m.n+m.d} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
           {hasCI && <>
             <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
             <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
@@ -1362,8 +1430,9 @@ function App() {
                 fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
             : <circle cx={cx} cy={cy} r={5} fill={onFrontier?c:"#12121f"}
                 stroke={onFrontier?undefined:c} strokeWidth={onFrontier?undefined:2}/>}
-          <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
-            fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+          {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+          <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c}
+            fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lp.a}>{m.n}</text>
         </g>);
       });
       dotPositions.current = positions;
@@ -1373,9 +1442,16 @@ function App() {
       </g>);
     }
     const vis = models.filter(m => m.ts>=CS && m.ts<=CE);
+    const predVis = testedOnly ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE);
+    const place = placeLabels([
+      ...vis.map(m => ({ key: m.n+m.d, cx: xS(m.ts), cy: yS(m.p), text: m.n,
+        want: LBL.has(m.n), rank: labelRank(isSota(m), m.ts) })),
+      ...predVis.map(m => ({ key: "pred"+m.n, cx: xS(m.ts), cy: yS(m.p), text: m.n, italic: true,
+        want: LBL.has(m.n), rank: labelRank(false, m.ts) })),
+    ].filter(i => !isNaN(i.cx) && !isNaN(i.cy)), { x0: px0, x1: px1, y0: py0, y1: py1 });
     const els = vis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
+      const c=COL[m.l], lb=place.get(m.n+m.d), lp=lb||LBL_DEFAULT;
       if (isNaN(cx)||isNaN(cy)) return null;
       // Only register hover targets for dots whose center is inside the plot area.
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
@@ -1383,7 +1459,7 @@ function App() {
       const ct = hasCI ? yS(Math.min(m.hi,yhiDyn)) : null;
       const cb = hasCI ? yS(Math.max(m.lo,YLO)) : null;
       const isOverlay = !isSota(m); // hollow if not SOTA in the active horizon
-      return (<g key={m.n+m.d} className={`mp${lb?' al':''}`}>
+      return (<g key={m.n+m.d} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
         {hasCI && <>
           <line x1={cx} y1={ct} x2={cx} y2={cb} stroke={c} strokeWidth={1.5} opacity={0.45}/>
           <line x1={cx-3} y1={ct} x2={cx+3} y2={ct} stroke={c} strokeWidth={1} opacity={0.45}/>
@@ -1391,21 +1467,23 @@ function App() {
         </>}
         <circle cx={cx} cy={cy} r={5} fill={isOverlay?"#12121f":c}
           stroke={isOverlay?c:undefined} strokeWidth={isOverlay?2:undefined}/>
-        <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c}
-          fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lb?.a||"start"}>{m.n}</text>
+        {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+        <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c}
+          fontSize={11} fontFamily={FONT} fontWeight={500} textAnchor={lp.a}>{m.n}</text>
       </g>);
     });
     // Predicted horizons (AECI conversions): dashed hollow diamonds.
-    const pels = testedOnly ? [] : predModels.filter(m => m.ts>=CS && m.ts<=CE).map(m => {
+    const pels = predVis.map(m => {
       const cx=xS(m.ts), cy=yS(m.p);
-      const c=COL[m.l], lb=LBL_TH_HIDE.has(m.n)?undefined:LBL[m.n];
+      const c=COL[m.l], lb=place.get("pred"+m.n), lp=lb||LBL_DEFAULT;
       if (isNaN(cx)||isNaN(cy)) return null;
       if (cx>=px0 && cx<=px1 && cy>=py0 && cy<=py1) positions.push({m, cx, cy});
-      return (<g key={"pred"+m.n} className={`mp${lb?' al':''}`}>
+      return (<g key={"pred"+m.n} className={`mp${lb?' al':''}`} data-n={m.n} data-cx={cx} data-cy={cy}>
         <path d={`M ${cx} ${cy-6} L ${cx+6} ${cy} L ${cx} ${cy+6} L ${cx-6} ${cy} Z`}
           fill="#12121f" stroke={c} strokeWidth={1.8} strokeDasharray="3 2"/>
-        <text className="ml" x={cx+(lb?.dx||8)} y={cy+(lb?.dy||-8)} fill={c} opacity={0.85}
-          fontSize={11} fontFamily={FONT} fontWeight={500} fontStyle="italic" textAnchor={lb?.a||"start"}>{m.n}</text>
+        {lb && <Leader cx={cx} cy={cy} lp={lb} c={c}/>}
+        <text className="ml" x={cx+lp.dx} y={cy+lp.dy} fill={c} opacity={0.85}
+          fontSize={11} fontFamily={FONT} fontWeight={500} fontStyle="italic" textAnchor={lp.a}>{m.n}</text>
       </g>);
     });
     dotPositions.current = positions;
