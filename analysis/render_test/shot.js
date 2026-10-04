@@ -289,8 +289,9 @@ const LOCAL = {
 
   // "Trend from <last frontier point>" on the main chart's trend tooltips.
   // Re-enable derived points first: the anchor may be predicted/imputed (the
-  // deliberate special case), so with everything shown TH anchors on Mythos
-  // 5.1's predicted horizon and ECI on Mythos 5.1's imputed score.
+  // deliberate special case), so with everything shown TH anchors on Opus
+  // 5.5's predicted horizon. On ECI Opus 5.5 is measured and newest, so it
+  // anchors there too (Mythos 5.1's imputed 166.66 sits just behind it).
   await page.getByText('Show tested models only').click();
   await page.waitForTimeout(600);
   await page.getByText('METR Time Horizon Trends').scrollIntoViewIfNeeded();
@@ -298,15 +299,15 @@ const LOCAL = {
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300); // extrapolation region, right of every dot
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.1')))
-    failures.push('TH tooltip: anchored-trend reading missing (want predicted Mythos 5.1 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Opus 5.5')))
+    failures.push('TH tooltip: anchored-trend reading missing (want predicted Opus 5.5 anchor)');
   await page.screenshot({ path: 'chart_th_anchored.png' });
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300);
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.1')))
-    failures.push('ECI tooltip: anchored-trend reading missing (want imputed Mythos 5.1 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Opus 5.5')))
+    failures.push('ECI tooltip: anchored-trend reading missing (want measured Opus 5.5 anchor)');
 
   // ── Mobile: pinch zoom must stay continuous across a multi-step gesture ──
   // (regression test for the one-step-pinch bug: gesture state used to reset

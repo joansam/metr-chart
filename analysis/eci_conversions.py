@@ -6,23 +6,24 @@ AECI -> time-horizon fit) with Epoch's public Capabilities Index, giving three
 fitted relationships:
 
     1. AECI -> ln(TH)   Claude models with an AECI and a METR result (n=7)
-    2. ECI  -> ln(TH)   all models with a public ECI and a METR result (~19,
+    2. ECI  -> ln(TH)   all models with a public ECI and a METR result (~20,
                         cross-lab: Claude / GPT / o-series / Gemini)
-    3. ECI  -> AECI     Claude models with both indices (n=11)
+    3. ECI  -> AECI     Claude models with both indices (n=10)
 
 Data sources:
     - METR-Horizon-v1.1 p50/p80 estimates: benchmark_results_1_1 (5).yaml
-    - Public ECI: analysis/data/epoch_capabilities_index.csv, downloaded from
-      Epoch AI's Benchmarking Hub (https://epoch.ai/benchmarks, CC-BY 4.0).
-      METR Time Horizons is NOT among the benchmarks that feed the ECI, so
-      fit 2 is not circular.
+    - Public ECI: analysis/data/eci_scores.csv, the
+      epoch_capabilities_index/eci_scores.csv member of Epoch AI's
+      benchmark_data.zip (https://epoch.ai/benchmarks, CC-BY 4.0), one row per
+      model keyed by Epoch's model name. METR Time Horizons is NOT among the
+      benchmarks that feed the ECI, so fit 2 is not circular.
     - AECI: analysis/data/aeci_systemcards.csv - one vintage only: the
-      "Anthropic ECI over time" chart in the Claude Fable 5.1 & Mythos 5.1
-      system card (Sep 1 2026), Figure 2.3.5.A. Three points (Mythos 5.1,
-      Mythos 5, Opus 5) are quoted in the card's prose; the rest are
+      "Anthropic ECI over time" chart in the Claude Opus 5.5 system card
+      (Sep 22 2026), Table 2.3.5.3.A + Figure 2.3.5.3.B. Five points (Mythos
+      Preview through Opus 5.5) are quoted in the card's table; the rest are
       digitized from the figure (see analysis/NOTES.md). Anthropic rerun the
       ECI fit globally at each release, so values drift between cards
-      (Mythos 5: 161.29 in the Fable 5 card -> 159.46 here), which is why
+      (Mythos 5.1: 161.98 in its own card -> 168.12 here), which is why
       vintages are never mixed. See the `source` column.
 
 Usage:
@@ -51,69 +52,75 @@ from scipy import stats
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 METR_YAML = os.path.join(HERE, "..", "benchmark_results_1_1 (5).yaml")
-ECI_CSV = os.path.join(HERE, "data", "epoch_capabilities_index.csv")
+ECI_CSV = os.path.join(HERE, "data", "eci_scores.csv")
 AECI_CSV = os.path.join(HERE, "data", "aeci_systemcards.csv")
 
-# display name (must match the AECI csv) -> (metr_yaml_key, eci_model_version, lab)
+# display name (must match the AECI csv) -> (metr_yaml_key, Epoch ECI model name, lab)
 # None means the model lacks that value.
 MODELS = {
-    "Claude 3 Opus":           ("claude_3_opus_inspect",              "claude-3-opus-20240229",     "anthropic"),
-    "Claude 3.5 Sonnet":       ("claude_3_5_sonnet_20240620_inspect", "claude-3-5-sonnet-20240620", "anthropic"),
-    "Claude 3.5 Sonnet (new)": ("claude_3_5_sonnet_20241022_inspect", "claude-3-5-sonnet-20241022", "anthropic"),
-    "Claude 3.7 Sonnet":       ("claude_3_7_sonnet_inspect",          "claude-3-7-sonnet-20250219", "anthropic"),
-    "Claude Opus 4":           ("claude_4_opus_inspect",              "claude-opus-4-20250514",     "anthropic"),
-    "Claude Opus 4.1":         ("claude_4_1_opus_inspect",            "claude-opus-4-1-20250805",   "anthropic"),
-    "Claude Sonnet 4.5":       (None,                                 "claude-sonnet-4-5-20250929", "anthropic"),
-    "Claude Opus 4.5":         ("claude_opus_4_5_inspect",            "claude-opus-4-5-20251101",   "anthropic"),
-    "Claude Opus 4.6":         ("claude_opus_4_6_inspect",            "claude-opus-4-6",            "anthropic"),
-    "Claude Opus 4.7":         (None,                                 "claude-opus-4-7",            "anthropic"),
-    "Claude Opus 4.8":         (None,                                 "claude-opus-4-8",            "anthropic"),
+    "Claude 3 Opus":           ("claude_3_opus_inspect",              "Claude 3 Opus",                    "anthropic"),
+    "Claude 3.5 Sonnet":       ("claude_3_5_sonnet_20240620_inspect", "Claude 3.5 Sonnet",                "anthropic"),
+    "Claude 3.5 Sonnet (new)": ("claude_3_5_sonnet_20241022_inspect", "Claude 3.5 Sonnet (October 2024)", "anthropic"),
+    "Claude 3.7 Sonnet":       ("claude_3_7_sonnet_inspect",          "Claude 3.7 Sonnet",                "anthropic"),
+    "Claude Opus 4":           ("claude_4_opus_inspect",              "Claude Opus 4",                    "anthropic"),
+    "Claude Opus 4.1":         ("claude_4_1_opus_inspect",            "Claude Opus 4.1",                  "anthropic"),
+    "Claude Sonnet 4.5":       (None,                                 "Claude Sonnet 4.5",                "anthropic"),
+    "Claude Opus 4.5":         ("claude_opus_4_5_inspect",            "Claude Opus 4.5",                  "anthropic"),
+    "Claude Opus 4.6":         ("claude_opus_4_6_inspect",            "Claude Opus 4.6",                  "anthropic"),
+    "Claude Opus 4.7":         (None,                                 "Claude Opus 4.7",                  "anthropic"),
+    "Claude Opus 4.8":         (None,                                 "Claude Opus 4.8",                  "anthropic"),
     # METR's Mythos Preview result is the Feb/Mar early checkpoint; the AECI
     # row describes the April 7 launch version, so no METR key here.
-    "Claude Mythos Preview":   (None,                                 None,                         "anthropic"),
+    "Claude Mythos Preview":   (None,                                 None,                               "anthropic"),
     # Mythos 5 and Fable 5 share an underlying model but are different
     # deployment variants: the system card's AECI point is labelled Mythos 5,
     # while Epoch measured the GA Fable 5. Kept as separate rows so the
     # cross-variant pair never enters the ECI->AECI fit.
-    "Claude Mythos 5":         (None,                                 None,                         "anthropic"),
-    "Claude Fable 5":          (None,                                 "claude-fable-5",             "anthropic"),
+    "Claude Mythos 5":         (None,                                 None,                               "anthropic"),
+    "Claude Fable 5":          (None,                                 "Claude Fable 5",                   "anthropic"),
     # Opus 5 has no METR run, but now carries BOTH indices as measured values —
     # the Jul 24 system card's AECI and Epoch's published ECI — so unlike the
     # other prediction-only rows it joins the ECI<->AECI fit basis.
-    "Claude Opus 5":           (None,                                 "claude-opus-5",              "anthropic"),
-    # Mythos 5.1 (Sep 1 2026 card): AECI only so far. Epoch has not yet scored
-    # the GA variant, Fable 5.1 — add a "Claude Fable 5.1" row with its ECI key
-    # when it lands, mirroring the Mythos 5 / Fable 5 split above.
-    "Claude Mythos 5.1":       (None,                                 None,                         "anthropic"),
-    "GPT-4":                   ("gpt_4",                              "gpt-4-0314",                 "openai"),
-    "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "gpt-4-turbo-2024-04-09",     "openai"),
-    "GPT-4o":                  ("gpt_4o_inspect",                     "gpt-4o-2024-05-13",          "openai"),
-    "o1-preview":              ("o1_preview",                         "o1-preview-2024-09-12",      "openai"),
-    "o1":                      ("o1_inspect",                         "o1-2024-12-17",              "openai"),
-    "o3":                      ("o3_inspect",                         "o3-2025-04-16",              "openai"),
-    "GPT-5":                   ("gpt_5_2025_08_07_inspect",           "gpt-5-2025-08-07",           "openai"),
-    "GPT-5.2":                 ("gpt_5_2",                            "gpt-5.2-2025-12-11",         "openai"),
-    "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "gpt-5.3-codex",              "openai"),
-    "GPT-5.4":                 ("gpt_5_4",                            "gpt-5.4-2026-03-05",         "openai"),
-    "GPT-5.5":                 (None,                                 "gpt-5.5",                    "openai"),
-    "GPT-5.6 Sol":             (None,                                 "gpt-5.6-sol",                "openai"),
-    "Gemini 3 Pro":            ("gemini_3_pro",                       "gemini-3-pro-preview",       "google"),
-    "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "gemini-3.1-pro-preview",     "google"),
+    "Claude Opus 5":           (None,                                 "Claude Opus 5",                    "anthropic"),
+    # Mythos 5.1 / Fable 5.1 (Sep 1 2026): the same split as Mythos 5 / Fable 5
+    # — the system card's AECI point is Mythos 5.1, Epoch scored the GA Fable 5.1.
+    "Claude Mythos 5.1":       (None,                                 None,                               "anthropic"),
+    "Claude Fable 5.1":        (None,                                 "Claude Fable 5.1",                 "anthropic"),
+    # Opus 5.5 (Sep 22 2026): both indices measured (its own card's AECI and
+    # Epoch's ECI), so like Opus 5 it joins the ECI<->AECI fit basis.
+    "Claude Opus 5.5":         (None,                                 "Claude Opus 5.5",                  "anthropic"),
+    "GPT-4":                   ("gpt_4",                              "GPT-4 (Mar 2023)",                 "openai"),
+    "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "GPT-4 Turbo (Apr 2024)",           "openai"),
+    "GPT-4o":                  ("gpt_4o_inspect",                     "GPT-4o (May 2024)",                "openai"),
+    "o1-preview":              ("o1_preview",                         "o1-preview",                       "openai"),
+    "o1":                      ("o1_inspect",                         "o1",                               "openai"),
+    "o3":                      ("o3_inspect",                         "o3",                               "openai"),
+    "GPT-5":                   ("gpt_5_2025_08_07_inspect",           "GPT-5",                            "openai"),
+    "GPT-5.2":                 ("gpt_5_2",                            "GPT-5.2",                          "openai"),
+    "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "GPT-5.3 Codex",                    "openai"),
+    "GPT-5.4":                 ("gpt_5_4",                            "GPT-5.4",                          "openai"),
+    "GPT-5.5":                 (None,                                 "GPT-5.5",                          "openai"),
+    "GPT-5.6 Sol":             (None,                                 "GPT-5.6 Sol",                      "openai"),
+    # GPT-6 Astra: the GPT-6 flagship (Sol/Luna are the cheaper tiers). ECI only;
+    # no METR run, so it routes through the openai lab-adjusted ECI fit.
+    "GPT-6 Astra":             (None,                                 "GPT-6 Astra",                      "openai"),
+    "Gemini 3 Pro":            ("gemini_3_pro",                       "Gemini 3 Pro",                     "google"),
+    "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "Gemini 3.1 Pro",                   "google"),
     # Open-weights reference models (open-vs-closed gap): public ECI only, no
     # METR run and no AECI, so they never enter any fit. Their labs have no
     # METR data either, so predictions fall back to the pooled ECI fit.
-    "DeepSeek-R1":             (None,                                 "DeepSeek-R1",                "deepseek"),
-    "GLM-5.2":                 (None,                                 "glm-5.2",                    "zai"),
+    "DeepSeek-R1":             (None,                                 "DeepSeek-R1",                      "deepseek"),
+    "GLM-5.2":                 (None,                                 "GLM-5.2",                          "zai"),
     # Kimi K3 is Moonshot's first API-access-only frontier model (K2.x were all
     # open weights), so it is NOT an open-weights reference point. Same routing
     # as those, though: no METR-tested Moonshot model, hence the pooled ECI fit.
-    "Kimi K3":                 (None,                                 "kimi-k3",                    "moonshot"),
+    "Kimi K3":                 (None,                                 "Kimi K3",                          "moonshot"),
     # Chart models with a METR result but no published index: their ECI/AECI
     # are estimated from the p50 horizon (inverted ECI fit) for display only
     # and never enter any fit.
-    "GPT-4 1106":              ("gpt_4_1106_inspect",                 None,                         "openai"),
-    "GPT-5.1 Codex Max":       ("gpt_5_1_codex_max_inspect",          None,                         "openai"),
-    "Mythos Preview (Early)":  ("claude_mythos_preview_early_inspect", None,                        "anthropic"),
+    "GPT-4 1106":              ("gpt_4_1106_inspect",                 None,                               "openai"),
+    "GPT-5.1 Codex Max":       ("gpt_5_1_codex_max_inspect",          None,                               "openai"),
+    "Mythos Preview (Early)":  ("claude_mythos_preview_early_inspect",None,                               "anthropic"),
 }
 
 # Keep in sync with gen_model_data.DATE_OVERRIDES: the chart plots the early
@@ -142,8 +149,12 @@ PREDICTED_DATES = {
     # System-card / GA date. The card's AECI chart plots the dot ~Aug 7 (the
     # evaluated snapshot, presumably); the release-date convention wins here.
     "Claude Mythos 5.1":     "2026-09-01",
+    "Claude Fable 5.1":      "2026-09-01",
+    "Claude Opus 5.5":       "2026-09-22",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
+    # Announced (and dated by Epoch) Sep 3; public/API release was Sep 4.
+    "GPT-6 Astra":           "2026-09-03",
     "DeepSeek-R1":           "2025-01-20",
     "GLM-5.2":               "2026-06-16",
     "Kimi K3":               "2026-07-16",
@@ -180,21 +191,11 @@ def load_metr(path=METR_YAML):
     return out
 
 
-VARIANT_SUFFIX = re.compile(r"_(low|medium|high|xhigh|max|none|minimal|unknown|\d+K)$")
-
-
 def load_eci(path=ECI_CSV):
-    """eci model version -> score. Reasoning-effort/context variants (_high,
-    _32K, ...) share their base model's score; some models appear ONLY as
-    variants, so also index the suffix-stripped base name."""
-    out = {}
-    for r in csv.DictReader(open(path, encoding="utf-8")):
-        if not r["ECI Score"]:
-            continue
-        score = float(r["ECI Score"])
-        out[r["Model version"]] = score
-        out.setdefault(VARIANT_SUFFIX.sub("", r["Model version"]), score)
-    return out
+    """Epoch model name -> ECI score. Epoch's eci_scores.csv has one row per
+    model (reasoning-effort variants already folded into the model)."""
+    return {r["Model"]: float(r["eci"])
+            for r in csv.DictReader(open(path, encoding="utf-8")) if r["eci"]}
 
 
 def loglin_fit(x, y_minutes):
@@ -506,7 +507,7 @@ def report(rows, fits, eci_all):
             print(f"{r['name']:24s} ECI  {r['eci']:6.2f} -> implied AECI {f['predict'](r['eci']):6.1f}")
     print("\nBarry's Jun 20 post predictions (Mythos 5: p50 61.3 h, p80 8.2 h) were"
           " made on the Fable 5 card's AECI vintage; the current file is the"
-          " Fable 5.1 vintage, so they no longer reproduce exactly (see NOTES.md).")
+          " Opus 5.5 vintage, so they no longer reproduce exactly (see NOTES.md).")
 
 
 def convert(fits, eci=None, aeci=None, lab=None):

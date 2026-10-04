@@ -27,3 +27,15 @@ vintage,series,entity,target_date,predicted,unit,actual,actual_date,note
 2026-09-01,th_p80,Mythos/Fable 5 (launch),,5.8,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Mythos 5 161.29 -> 159.46); earlier 8.2 h row stands as the Jun 20 vintage"
 2026-09-01,th_p50,Opus 5,,55.2,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Opus 5 162.1 -> 160.73); earlier 71.4 h row stands as the Jul 24 vintage"
 2026-09-01,th_p80,Opus 5,,7.4,hours,,,"re-prediction on the Fable 5.1 card's rescaled AECI vintage (Opus 5 162.1 -> 160.73); earlier 9.5 h row stands as the Jul 24 vintage"
+2026-10-04,th_p50,Opus 5.5,,153.1,hours,,,AECI-fit prediction (AECI 169.36 from Opus 5.5 system card); event-based
+2026-10-04,th_p80,Opus 5.5,,20.0,hours,,,AECI-fit prediction (AECI 169.36 from Opus 5.5 system card); event-based
+2026-10-04,th_p50,GPT-6 Astra,,38.8,hours,,,openai lab-adjusted ECI-fit prediction (Epoch ECI 166.51); event-based
+2026-10-04,th_p80,GPT-6 Astra,,6.5,hours,,,openai lab-adjusted ECI-fit prediction (Epoch ECI 166.51); event-based
+2026-10-04,th_p50,Fable 5.1,,88.1,hours,,,"implied-AECI prediction (Epoch ECI 164.82 -> AECI 166.2, Opus 5.5 card vintage); event-based"
+2026-10-04,th_p80,Fable 5.1,,11.7,hours,,,"implied-AECI prediction (Epoch ECI 164.82 -> AECI 166.2, Opus 5.5 card vintage); event-based"
+2026-10-04,th_p50,Mythos 5.1,,123.6,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Mythos 5.1 161.98 -> 168.12); earlier 69.8 h row stands as the Sep 1 vintage"
+2026-10-04,th_p80,Mythos 5.1,,16.3,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Mythos 5.1 161.98 -> 168.12); earlier 9.3 h row stands as the Sep 1 vintage"
+2026-10-04,th_p50,Opus 5,,74.4,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Opus 5 160.73 -> 165.18); earlier rows stand"
+2026-10-04,th_p80,Opus 5,,10.0,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Opus 5 160.73 -> 165.18); earlier rows stand"
+2026-10-04,th_p50,Mythos/Fable 5 (launch),,66.1,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Mythos 5 159.46 -> 164.49); earlier rows stand"
+2026-10-04,th_p80,Mythos/Fable 5 (launch),,8.9,hours,,,"re-prediction on the Opus 5.5 card's rescaled AECI vintage (Mythos 5 159.46 -> 164.49); earlier rows stand"
