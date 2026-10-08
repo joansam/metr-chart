@@ -462,96 +462,97 @@ const fmtHLong = h => {
 // `python3 analysis/finance_data.py --emit-js` — do not hand-edit; verify with
 // `--check-html`. v is USD; s is the series ("rev" | "val").
 const FIN_RAW = [
-  { c: "anthropic", s: "rev", d: "2023-10-01", v: 100000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "anthropic", s: "rev", d: "2024-01-01", v: 87000000, t: "run rate", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "rev", d: "2024-12-31", v: 1000000000, t: "run rate", cf: "Likely", src: "cnbc.com" },
-  { c: "anthropic", s: "rev", d: "2025-03-01", v: 1400000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "anthropic", s: "rev", d: "2025-03-31", v: 2000000000, t: "run rate", cf: "Confident", src: "cnbc.com" },
-  { c: "anthropic", s: "rev", d: "2025-05-30", v: 3000000000, t: "run rate", cf: "Likely", src: "cnbc.com" },
-  { c: "anthropic", s: "rev", d: "2025-07-01", v: 4000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "anthropic", s: "rev", d: "2025-07-29", v: 5000000000, t: "ARR", cf: "Likely", src: "bloomberg.com" },
-  { c: "anthropic", s: "rev", d: "2025-10-21", v: 7000000000, t: "run rate", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "rev", d: "2025-12-31", v: 9000000000, t: "run rate", cf: "Likely", src: "bloomberg.com" },
-  { c: "anthropic", s: "rev", d: "2026-02-12", v: 14000000000, t: "run rate", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "rev", d: "2026-03-03", v: 19000000000, t: "run rate", cf: "Confident", src: "x.com" },
-  { c: "anthropic", s: "rev", d: "2026-04-06", v: 30000000000, t: "run rate", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "rev", d: "2026-05-15", v: 47000000000, t: "run rate", cf: "Likely", src: "anthropic.com" },
-  { c: "anthropic", s: "rev", d: "2026-07-31", v: 65000000000, t: "run rate", cf: "Likely", src: "bloomberg.com" },
-  { c: "cohere", s: "rev", d: "2023-12-31", v: 13000000, t: "run rate", cf: "Likely", src: "finance.yahoo.com" },
-  { c: "cohere", s: "rev", d: "2024-03-15", v: 22000000, t: "run rate", cf: "Likely", src: "finance.yahoo.com" },
-  { c: "cohere", s: "rev", d: "2025-02-24", v: 70000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "cohere", s: "rev", d: "2025-05-15", v: 100000000, t: "run rate", cf: "Likely", src: "finance.yahoo.com" },
-  { c: "cohere", s: "rev", d: "2025-10-20", v: 150000000, t: "run rate", cf: "Confident", src: "bloomberg.com" },
-  { c: "cohere", s: "rev", d: "2025-12-31", v: 240000000, t: "ARR", cf: "Likely", src: "cnbc.com" },
-  { c: "deepseek", s: "rev", d: "2026-07-14", v: 450000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "mistral", s: "rev", d: "2025-06-11", v: 100000000, t: "run rate", cf: "Confident", src: "wsj.com" },
-  { c: "mistral", s: "rev", d: "2026-01-31", v: 400000000, t: "run rate", cf: "Likely", src: "ft.com" },
-  { c: "moonshot", s: "rev", d: "2026-04-30", v: 200000000, t: "ARR", cf: "Likely", src: "bloomberg.com" },
-  { c: "moonshot", s: "rev", d: "2026-06-30", v: 300000000, t: "ARR", cf: "Likely", src: "bloomberg.com" },
-  { c: "openai", s: "rev", d: "2023-03-01", v: 200000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2023-08-29", v: 1000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2023-10-10", v: 1300000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2023-12-30", v: 1600000000, t: "run rate", cf: "Confident", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2023-12-31", v: 2000000000, t: "run rate", cf: "Likely", src: "ft.com" },
-  { c: "openai", s: "rev", d: "2024-06-12", v: 3400000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2024-08-15", v: 3600000000, t: "run rate", cf: "Likely", src: "nytimes.com" },
-  { c: "openai", s: "rev", d: "2024-09-12", v: 4000000000, t: "ARR", cf: "Likely", src: "wsj.com" },
-  { c: "openai", s: "rev", d: "2024-12-31", v: 5500000000, t: "ARR", cf: "Likely", src: "cnbc.com" },
-  { c: "openai", s: "rev", d: "2025-06-09", v: 10000000000, t: "ARR", cf: "Likely", src: "cnbc.com" },
-  { c: "openai", s: "rev", d: "2025-07-30", v: 12000000000, t: "run rate", cf: "Confident", src: "cnbc.com" },
-  { c: "openai", s: "rev", d: "2025-08-01", v: 13000000000, t: "ARR", cf: "Likely", src: "nytimes.com" },
-  { c: "openai", s: "rev", d: "2025-12-18", v: 19000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2025-12-31", v: 21400000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2026-02-28", v: 25000000000, t: "run rate", cf: "Likely", src: "theinformation.com" },
-  { c: "openai", s: "rev", d: "2026-08-13", v: 40000000000, t: "run rate", cf: "Likely", src: "bloomberg.com" },
-  { c: "xai", s: "rev", d: "2024-11-20", v: 100000000, t: "run rate", cf: "Likely", src: "wsj.com" },
-  { c: "xai", s: "rev", d: "2025-03-31", v: 172000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
-  { c: "xai", s: "rev", d: "2025-06-30", v: 236000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
-  { c: "xai", s: "rev", d: "2025-09-30", v: 428000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
-  { c: "zai", s: "rev", d: "2022-07-01", v: 8600000, t: "interpolated", cf: "Likely", src: "www1.hkexnews.hk" },
-  { c: "zai", s: "rev", d: "2023-07-01", v: 17600000, t: "interpolated", cf: "Likely", src: "www1.hkexnews.hk" },
-  { c: "zai", s: "rev", d: "2024-04-01", v: 12400000, t: "interpolated", cf: "Likely", src: "www1.hkexnews.hk" },
-  { c: "zai", s: "rev", d: "2024-10-01", v: 37500000, t: "interpolated", cf: "Likely", src: "www1.hkexnews.hk" },
-  { c: "zai", s: "rev", d: "2025-04-01", v: 53300000, t: "interpolated", cf: "Likely", src: "www1.hkexnews.hk" },
-  { c: "zai", s: "rev", d: "2025-10-01", v: 153000000, t: "interpolated", cf: "Likely", src: "bloomberg.com" },
-  { c: "anthropic", s: "val", d: "2021-05-28", v: 674000000, t: "primary round", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2022-04-29", v: 3700000000, t: "primary round", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2023-05-23", v: 4500000000, t: "primary round", cf: "Likely", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2024-01-11", v: 18400000000, t: "primary round", cf: "Likely", src: "cnbc.com" },
-  { c: "anthropic", s: "val", d: "2025-03-03", v: 61500000000, t: "primary round", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2025-09-02", v: 183000000000, t: "primary round", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2026-02-12", v: 380000000000, t: "primary round", cf: "Confident", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2026-04-20", v: 380000000000, t: "primary round", cf: "Likely", src: "anthropic.com" },
-  { c: "anthropic", s: "val", d: "2026-04-24", v: 380000000000, t: "primary round", cf: "Confident", src: "reuters.com" },
-  { c: "anthropic", s: "val", d: "2026-05-28", v: 965000000000, t: "primary round", cf: "Confident", src: "" },
-  { c: "deepseek", s: "val", d: "2026-06-16", v: 50000000000, t: "primary round", cf: "Likely", src: "wsj.com" },
-  { c: "minimax", s: "val", d: "2026-01-08", v: 6500000000, t: "primary round", cf: "Confident", src: "reuters.com" },
-  { c: "minimax", s: "val", d: "2026-03-31", v: 37200000000, t: "other round", cf: "Confident", src: "finance.yahoo.com" },
-  { c: "mistral", s: "val", d: "2023-06-13", v: 260000000, t: "primary round", cf: "Confident", src: "techcrunch.com" },
-  { c: "mistral", s: "val", d: "2023-12-11", v: 2000000000, t: "primary round", cf: "Likely", src: "techcrunch.com" },
-  { c: "mistral", s: "val", d: "2024-02-27", v: 2000000000, t: "primary round", cf: "Likely", src: "techcrunch.com" },
-  { c: "mistral", s: "val", d: "2024-06-11", v: 6000000000, t: "primary,debt round", cf: "Confident", src: "techcrunch.com" },
-  { c: "mistral", s: "val", d: "2025-09-09", v: 13700000000, t: "primary round", cf: "Confident", src: "mistral.ai" },
-  { c: "openai", s: "val", d: "2021-07-01", v: 14000000000, t: "secondary round", cf: "Uncertain", src: "wsj.com" },
-  { c: "openai", s: "val", d: "2023-04-26", v: 27000000000, t: "primary round", cf: "Confident", src: "reuters.com" },
-  { c: "openai", s: "val", d: "2024-02-16", v: 80000000000, t: "secondary round", cf: "Likely", src: "nytimes.com" },
-  { c: "openai", s: "val", d: "2024-10-02", v: 157000000000, t: "primary round", cf: "Confident", src: "openai.com" },
-  { c: "openai", s: "val", d: "2025-03-31", v: 300000000000, t: "primary round", cf: "Likely", src: "cnbc.com" },
-  { c: "openai", s: "val", d: "2025-08-01", v: 300000000000, t: "primary round", cf: "Likely", src: "nytimes.com" },
-  { c: "openai", s: "val", d: "2025-10-01", v: 500000000000, t: "secondary round", cf: "Confident", src: "wsj.com" },
-  { c: "openai", s: "val", d: "2026-02-27", v: 840000000000, t: "primary round", cf: "Confident", src: "openai.com" },
-  { c: "openai", s: "val", d: "2026-03-31", v: 852000000000, t: "primary round", cf: "Confident", src: "openai.com" },
-  { c: "xai", s: "val", d: "2024-05-27", v: 24000000000, t: "primary round", cf: "Confident", src: "x.ai" },
-  { c: "xai", s: "val", d: "2024-11-20", v: 45000000000, t: "primary round", cf: "Confident", src: "x.ai" },
-  { c: "xai", s: "val", d: "2025-03-28", v: 113000000000, t: "other round", cf: "Confident", src: "cnbc.com" },
-  { c: "xai", s: "val", d: "2025-06-30", v: 150000000000, t: "primary,debt round", cf: "Likely", src: "cnbc.com" },
-  { c: "xai", s: "val", d: "2026-01-06", v: 230000000000, t: "primary round", cf: "Likely", src: "x.ai" },
-  { c: "zai", s: "val", d: "2026-01-08", v: 6600000000, t: "primary round", cf: "Confident", src: "bloomberg.com" },
-  { c: "zai", s: "val", d: "2026-03-31", v: 39400000000, t: "other round", cf: "Confident", src: "reuters.com" },
+  { c: "anthropic", s: "rev", d: "2023-10-01", v: 100000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openai-rival-anthropic-in-talks-to-raise-2-billion-from-google-others-as-ai-arms-race-accelerates" },
+  { c: "anthropic", s: "rev", d: "2024-01-01", v: 87000000, t: "run rate", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-expands-global-leadership-in-enterprise-ai-naming-chris-ciauri-as-managing-director-of" },
+  { c: "anthropic", s: "rev", d: "2024-12-31", v: 1000000000, t: "run rate", cf: "Likely", src: "https://www.cnbc.com/2025/01/22/google-agrees-to-new-1-billion-investment-in-anthropic.html" },
+  { c: "anthropic", s: "rev", d: "2025-03-01", v: 1400000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/anthropics-claude-drives-strong-revenue-growth-while-powering-manus-sensation" },
+  { c: "anthropic", s: "rev", d: "2025-03-31", v: 2000000000, t: "run rate", cf: "Confident", src: "https://www.cnbc.com/2025/05/16/anthropic-ai-credit-facility.html" },
+  { c: "anthropic", s: "rev", d: "2025-05-30", v: 3000000000, t: "run rate", cf: "Likely", src: "https://www.cnbc.com/2025/05/30/anthropic-hits-3-billion-in-annualized-revenue-on-business-demand-for-ai.html" },
+  { c: "anthropic", s: "rev", d: "2025-07-01", v: 4000000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/anthropic-revenue-hits-4-billion-annual-pace-competition-cursor-intensifies" },
+  { c: "anthropic", s: "rev", d: "2025-07-29", v: 5000000000, t: "ARR", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2025-07-29/anthropic-nears-deal-to-raise-funding-at-170-billion-valuation" },
+  { c: "anthropic", s: "rev", d: "2025-10-21", v: 7000000000, t: "run rate", cf: "Confident", src: "https://www.anthropic.com/news/statement-dario-amodei-american-ai-leadership" },
+  { c: "anthropic", s: "rev", d: "2025-12-31", v: 9000000000, t: "run rate", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-01-21/anthropic-s-revenue-run-rate-tops-9-billion-as-vcs-pile-in" },
+  { c: "anthropic", s: "rev", d: "2026-02-12", v: 14000000000, t: "run rate", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-30-billion-series-g-funding-380-billion-post-money-valuation" },
+  { c: "anthropic", s: "rev", d: "2026-03-03", v: 19000000000, t: "run rate", cf: "Confident", src: "https://x.com/apoorv03/status/2029018856342290550" },
+  { c: "anthropic", s: "rev", d: "2026-04-06", v: 30000000000, t: "run rate", cf: "Confident", src: "https://www.anthropic.com/news/google-broadcom-partnership-compute" },
+  { c: "anthropic", s: "rev", d: "2026-05-15", v: 47000000000, t: "run rate", cf: "Likely", src: "https://www.anthropic.com/news/series-h" },
+  { c: "anthropic", s: "rev", d: "2026-07-31", v: 65000000000, t: "run rate", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-08-17/anthropic-revenue-run-rate-surpasses-65-billion-ahead-of-ipo" },
+  { c: "cohere", s: "rev", d: "2023-12-31", v: 13000000, t: "run rate", cf: "Likely", src: "https://finance.yahoo.com/news/exclusive-ai-startup-cohere-seeks-042607354.html" },
+  { c: "cohere", s: "rev", d: "2024-03-15", v: 22000000, t: "run rate", cf: "Likely", src: "https://finance.yahoo.com/news/exclusive-ai-startup-cohere-seeks-042607354.html" },
+  { c: "cohere", s: "rev", d: "2025-02-24", v: 70000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/cohere-boosts-revenue-pace-to-70-million-on-overseas-growth" },
+  { c: "cohere", s: "rev", d: "2025-05-15", v: 100000000, t: "run rate", cf: "Likely", src: "https://finance.yahoo.com/news/ai-firm-cohere-doubles-annualized-203247578.html" },
+  { c: "cohere", s: "rev", d: "2025-10-20", v: 150000000, t: "run rate", cf: "Confident", src: "https://www.bloomberg.com/news/articles/2025-10-20/nvidia-backed-cohere-to-offer-secondary-sale-of-employee-shares" },
+  { c: "cohere", s: "rev", d: "2025-12-31", v: 240000000, t: "ARR", cf: "Likely", src: "https://www.cnbc.com/2026/02/13/ai-startup-cohere-revenue-ipo.html" },
+  { c: "deepseek", s: "rev", d: "2026-07-14", v: 450000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/deepseeks-annualized-revenue-nears-500-million-boosting-fundraise-ipo-plans" },
+  { c: "mistral", s: "rev", d: "2025-06-11", v: 100000000, t: "run rate", cf: "Confident", src: "https://www.wsj.com/tech/ai/fears-over-u-s-ai-dominance-boost-business-for-frances-mistral-14405419" },
+  { c: "mistral", s: "rev", d: "2026-01-31", v: 400000000, t: "run rate", cf: "Likely", src: "https://www.ft.com/content/664249e7-e8d5-4425-b397-ad3ed590b305" },
+  { c: "moonshot", s: "rev", d: "2026-04-30", v: 200000000, t: "ARR", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-05-07/kimi-chatbot-maker-moonshot-ai-valued-at-20-billion-in-meituan-led-round" },
+  { c: "moonshot", s: "rev", d: "2026-06-30", v: 300000000, t: "ARR", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-07-21/china-s-moonshot-in-talks-on-pre-ipo-funds-at-50-billion-value" },
+  { c: "openai", s: "rev", d: "2023-03-01", v: 200000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openais-losses-doubled-to-540-million-as-it-developed-chatgpt" },
+  { c: "openai", s: "rev", d: "2023-08-29", v: 1000000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openai-passes-1-billion-revenue-pace-as-big-companies-boost-ai-spending" },
+  { c: "openai", s: "rev", d: "2023-10-10", v: 1300000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openais-revenue-crossed-1-3-billion-annualized-rate-ceo-tells-staff" },
+  { c: "openai", s: "rev", d: "2023-12-30", v: 1600000000, t: "run rate", cf: "Confident", src: "https://www.theinformation.com/articles/openais-annualized-revenue-tops-1-6-billion-as-customers-shrug-off-ceo-drama" },
+  { c: "openai", s: "rev", d: "2023-12-31", v: 2000000000, t: "run rate", cf: "Likely", src: "https://www.ft.com/content/81ac0e78-5b9b-43c2-b135-d11c47480119" },
+  { c: "openai", s: "rev", d: "2024-06-12", v: 3400000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openais-annualized-revenue-doubles-to-3-4-billion-since-late-2023" },
+  { c: "openai", s: "rev", d: "2024-08-15", v: 3600000000, t: "run rate", cf: "Likely", src: "https://www.nytimes.com/2024/09/27/technology/openai-chatgpt-investors-funding.html" },
+  { c: "openai", s: "rev", d: "2024-09-12", v: 4000000000, t: "ARR", cf: "Likely", src: "https://www.wsj.com/tech/ai/united-arab-emirates-fund-in-talks-to-invest-in-openai-fd4e4977" },
+  { c: "openai", s: "rev", d: "2024-12-31", v: 5500000000, t: "ARR", cf: "Likely", src: "https://www.cnbc.com/2025/06/09/openai-hits-10-billion-in-annualized-revenue-fueled-by-chatgpt-growth.html" },
+  { c: "openai", s: "rev", d: "2025-06-09", v: 10000000000, t: "ARR", cf: "Likely", src: "https://www.cnbc.com/2025/06/09/openai-hits-10-billion-in-annualized-revenue-fueled-by-chatgpt-growth.html" },
+  { c: "openai", s: "rev", d: "2025-07-30", v: 12000000000, t: "run rate", cf: "Confident", src: "https://www.cnbc.com/2025/08/20/openai-compute-ai.html" },
+  { c: "openai", s: "rev", d: "2025-08-01", v: 13000000000, t: "ARR", cf: "Likely", src: "https://www.nytimes.com/2025/08/01/business/dealbook/openai-ai-mega-funding-deal.html" },
+  { c: "openai", s: "rev", d: "2025-12-18", v: 19000000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openais-organizational-problems-hurt-chatgpt" },
+  { c: "openai", s: "rev", d: "2025-12-31", v: 21400000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap" },
+  { c: "openai", s: "rev", d: "2026-02-28", v: 25000000000, t: "run rate", cf: "Likely", src: "https://www.theinformation.com/articles/openai-tops-25-billion-annualized-revenue-anthropic-narrows-gap" },
+  { c: "openai", s: "rev", d: "2026-08-13", v: 40000000000, t: "run rate", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-08-13/openai-s-revenue-run-rate-tops-40-billion-ahead-of-ipo" },
+  { c: "openai", s: "rev", d: "2026-09-30", v: 50000000000, t: "", cf: "Likely", src: "https://www.ft.com/content/b66a9858-f8fb-46cb-b506-44bfe26fca2a", note: "approaching $50bn, per the FT" },
+  { c: "xai", s: "rev", d: "2024-11-20", v: 100000000, t: "run rate", cf: "Likely", src: "https://www.wsj.com/tech/ai/elon-musks-startup-xai-valued-at-50-billion-in-new-funding-round-7e3669dc" },
+  { c: "xai", s: "rev", d: "2025-03-31", v: 172000000, t: "interpolated", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-01-09/musk-s-xai-reports-higher-quarterly-loss-plans-to-power-optimus" },
+  { c: "xai", s: "rev", d: "2025-06-30", v: 236000000, t: "interpolated", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-01-09/musk-s-xai-reports-higher-quarterly-loss-plans-to-power-optimus" },
+  { c: "xai", s: "rev", d: "2025-09-30", v: 428000000, t: "interpolated", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-01-09/musk-s-xai-reports-higher-quarterly-loss-plans-to-power-optimus" },
+  { c: "zai", s: "rev", d: "2022-07-01", v: 8600000, t: "interpolated", cf: "Likely", src: "https://www1.hkexnews.hk/app/sehk/2025/107977/a128413/sehk25121901755.pdf" },
+  { c: "zai", s: "rev", d: "2023-07-01", v: 17600000, t: "interpolated", cf: "Likely", src: "https://www1.hkexnews.hk/app/sehk/2025/107977/a128413/sehk25121901755.pdf" },
+  { c: "zai", s: "rev", d: "2024-04-01", v: 12400000, t: "interpolated", cf: "Likely", src: "https://www1.hkexnews.hk/app/sehk/2025/107977/a128413/sehk25121901755.pdf" },
+  { c: "zai", s: "rev", d: "2024-10-01", v: 37500000, t: "interpolated", cf: "Likely", src: "https://www1.hkexnews.hk/app/sehk/2025/107977/a128413/sehk25121901755.pdf" },
+  { c: "zai", s: "rev", d: "2025-04-01", v: 53300000, t: "interpolated", cf: "Likely", src: "https://www1.hkexnews.hk/app/sehk/2025/107977/a128413/sehk25121901755.pdf" },
+  { c: "zai", s: "rev", d: "2025-10-01", v: 153000000, t: "interpolated", cf: "Likely", src: "https://www.bloomberg.com/news/articles/2026-03-31/zhipu-s-losses-climb-60-after-chinese-ai-rivalry-worsens" },
+  { c: "anthropic", s: "val", d: "2021-05-28", v: 674000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-124-million-to-build-more-reliable-general-ai-systems" },
+  { c: "anthropic", s: "val", d: "2022-04-29", v: 3700000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-series-b-to-build-safe-reliable-ai" },
+  { c: "anthropic", s: "val", d: "2023-05-23", v: 4500000000, t: "primary round", cf: "Likely", src: "https://www.anthropic.com/news/anthropic-series-c" },
+  { c: "anthropic", s: "val", d: "2024-01-11", v: 18400000000, t: "primary round", cf: "Likely", src: "https://www.cnbc.com/2023/12/21/openai-rival-anthropic-in-talks-to-raise-750-million-funding-round.html" },
+  { c: "anthropic", s: "val", d: "2025-03-03", v: 61500000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-series-e-at-usd61-5b-post-money-valuation" },
+  { c: "anthropic", s: "val", d: "2025-09-02", v: 183000000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation" },
+  { c: "anthropic", s: "val", d: "2026-02-12", v: 380000000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/anthropic-raises-30-billion-series-g-funding-380-billion-post-money-valuation" },
+  { c: "anthropic", s: "val", d: "2026-04-20", v: 380000000000, t: "primary round", cf: "Likely", src: "https://www.anthropic.com/news/anthropic-amazon-compute" },
+  { c: "anthropic", s: "val", d: "2026-04-24", v: 380000000000, t: "primary round", cf: "Confident", src: "https://www.reuters.com/business/google-plans-invest-up-40-billion-anthropic-bloomberg-news-reports-2026-04-24/" },
+  { c: "anthropic", s: "val", d: "2026-05-28", v: 965000000000, t: "primary round", cf: "Confident", src: "https://www.anthropic.com/news/series-h" },
+  { c: "deepseek", s: "val", d: "2026-06-16", v: 50000000000, t: "primary round", cf: "Likely", src: "https://www.wsj.com/tech/ai/deepseek-becomes-chinas-most-valuable-ai-startup-after-over-7-4-billion-fundraise-78ef64c0" },
+  { c: "minimax", s: "val", d: "2026-01-08", v: 6500000000, t: "primary round", cf: "Confident", src: "https://www.reuters.com/world/asia-pacific/chinas-ai-startup-minimax-group-raises-619-million-hong-kong-ipo-2026-01-08/" },
+  { c: "minimax", s: "val", d: "2026-03-31", v: 37200000000, t: "other round", cf: "Confident", src: "https://finance.yahoo.com/quote/0100.HK/" },
+  { c: "mistral", s: "val", d: "2023-06-13", v: 260000000, t: "primary round", cf: "Confident", src: "https://techcrunch.com/2023/06/13/frances-mistral-ai-blows-in-with-a-113m-seed-round-at-a-260m-valuation-to-take-on-openai/" },
+  { c: "mistral", s: "val", d: "2023-12-11", v: 2000000000, t: "primary round", cf: "Likely", src: "https://techcrunch.com/2023/12/11/mistral-ai-a-paris-based-openai-rival-closed-its-415-million-funding-round/" },
+  { c: "mistral", s: "val", d: "2024-02-27", v: 2000000000, t: "primary round", cf: "Likely", src: "https://techcrunch.com/2024/02/27/microsoft-made-a-16-million-investment-in-mistral-ai/" },
+  { c: "mistral", s: "val", d: "2024-06-11", v: 6000000000, t: "primary,debt round", cf: "Confident", src: "https://techcrunch.com/2024/06/11/paris-based-ai-startup-mistral-ai-raises-640-million/" },
+  { c: "mistral", s: "val", d: "2025-09-09", v: 13700000000, t: "primary round", cf: "Confident", src: "https://mistral.ai/news/mistral-ai-raises-1-7-b-to-accelerate-technological-progress-with-ai" },
+  { c: "openai", s: "val", d: "2021-07-01", v: 14000000000, t: "secondary round", cf: "Uncertain", src: "https://www.wsj.com/articles/chatgpt-creator-openai-is-in-talks-for-tender-offer-that-would-value-it-at-29-billion-11672949279b" },
+  { c: "openai", s: "val", d: "2023-04-26", v: 27000000000, t: "primary round", cf: "Confident", src: "https://www.reuters.com/markets/deals/openai-closes-10-bln-funding-round-27-bln-29-bln-valuation-techcrunch-2023-04-28/" },
+  { c: "openai", s: "val", d: "2024-02-16", v: 80000000000, t: "secondary round", cf: "Likely", src: "https://www.nytimes.com/2024/02/16/technology/openai-artificial-intelligence-deal-valuation.html" },
+  { c: "openai", s: "val", d: "2024-10-02", v: 157000000000, t: "primary round", cf: "Confident", src: "https://openai.com/index/scale-the-benefits-of-ai/" },
+  { c: "openai", s: "val", d: "2025-03-31", v: 300000000000, t: "primary round", cf: "Likely", src: "https://www.cnbc.com/2025/03/31/openai-closes-40-billion-in-funding-the-largest-private-fundraise-in-history-softbank-chatgpt.html" },
+  { c: "openai", s: "val", d: "2025-08-01", v: 300000000000, t: "primary round", cf: "Likely", src: "https://www.nytimes.com/2025/08/01/business/dealbook/openai-ai-mega-funding-deal.html" },
+  { c: "openai", s: "val", d: "2025-10-01", v: 500000000000, t: "secondary round", cf: "Confident", src: "https://www.wsj.com/tech/ai/openai-valuation-hits-500-billion-while-altman-signs-more-deals-in-asia-59b47a0d" },
+  { c: "openai", s: "val", d: "2026-02-27", v: 840000000000, t: "primary round", cf: "Confident", src: "https://openai.com/index/scaling-ai-for-everyone/" },
+  { c: "openai", s: "val", d: "2026-03-31", v: 852000000000, t: "primary round", cf: "Confident", src: "https://openai.com/index/accelerating-the-next-phase-ai/" },
+  { c: "xai", s: "val", d: "2024-05-27", v: 24000000000, t: "primary round", cf: "Confident", src: "https://x.ai/news/series-b" },
+  { c: "xai", s: "val", d: "2024-11-20", v: 45000000000, t: "primary round", cf: "Confident", src: "https://x.ai/news/series-c" },
+  { c: "xai", s: "val", d: "2025-03-28", v: 113000000000, t: "other round", cf: "Confident", src: "https://www.cnbc.com/2025/03/28/elon-musk-says-xai-has-acquired-x-in-deal-that-values-social-media-site-at-33-billion.html" },
+  { c: "xai", s: "val", d: "2025-06-30", v: 150000000000, t: "primary,debt round", cf: "Likely", src: "https://www.cnbc.com/2025/07/01/elon-musk-xai-raises-10-billion-in-debt-and-equity.html" },
+  { c: "xai", s: "val", d: "2026-01-06", v: 230000000000, t: "primary round", cf: "Likely", src: "https://x.ai/news/series-e" },
+  { c: "zai", s: "val", d: "2026-01-08", v: 6600000000, t: "primary round", cf: "Confident", src: "https://www.bloomberg.com/news/articles/2026-01-07/china-s-openai-rival-zhipu-debuts-in-hk-after-558-million-ipo" },
+  { c: "zai", s: "val", d: "2026-03-31", v: 39400000000, t: "other round", cf: "Confident", src: "https://www.reuters.com/markets/companies/2513.HK/profile/" },
 ];
 // ln(USD) = b + a*(years since 2024-01-01); OLS per company, n >= 4 points.
 const FIN_FITS = {
-  rev: { anthropic: { a: 2.392008, b: 18.5013, n: 15, r2: 0.984 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.355553, b: 21.0843, n: 16, r2: 0.966 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
+  rev: { anthropic: { a: 2.392008, b: 18.5013, n: 15, r2: 0.984 }, cohere: { a: 1.362819, b: 16.5017, n: 6, r2: 0.991 }, openai: { a: 1.340045, b: 21.0901, n: 17, r2: 0.970 }, xai: { a: 1.643375, b: 16.9264, n: 4, r2: 0.984 }, zai: { a: 0.808961, b: 16.9085, n: 6, r2: 0.822 } },
   val: { anthropic: { a: 1.337501, b: 23.7067, n: 10, r2: 0.973 }, mistral: { a: 1.608350, b: 21.0731, n: 5, r2: 0.822 }, openai: { a: 0.924117, b: 25.2022, n: 9, r2: 0.955 }, xai: { a: 1.478388, b: 23.3704, n: 5, r2: 0.956 } },
 };
 
@@ -576,6 +577,16 @@ const FIN_YTICKS = [1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13];
 // decade above the top trend point.
 const FIN_NICE = [1e6, 3e6, 1e7, 3e7, 1e8, 3e8, 1e9, 3e9, 1e10, 3e10,
                   1e11, 3e11, 1e12, 3e12, 1e13];
+// Day-level date for tooltips. Data dates are ISO day strings, which parse
+// as UTC midnight, so format in UTC — local time would show the previous day
+// to every viewer west of Greenwich.
+const fmtDay = ts => new Date(ts).toLocaleString("en-US",
+  { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+// Credit line for a data point: the outlet's host, linked to the article.
+const SrcLink = ({ url }) => (
+  <a href={url} target="_blank" rel="noopener noreferrer"
+    style={{ color: "#8fa8c8", textDecoration: "underline" }}>
+    {url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}</a>);
 const fmtUSD = v => v >= 1e12 ? `$${+(v/1e12).toFixed(1)}T`
                   : v >= 1e9  ? `$${+(v/1e9).toFixed(1)}B`
                   : `$${+(v/1e6).toFixed(0)}M`;
@@ -757,9 +768,12 @@ function useZoomPan({ chartRef, xMin, xMax, yMin, yMax, margin, yAxisW, height }
 function FinanceChart({ isMobile, vpH }) {
   const [series, setSeries] = useState("rev"); // "rev" | "val"
   // Tooltip target: r = a report dot, l = a point on a fitted trend line.
-  const [tipState, setTipState] = useState({ r: null, l: null, cx: 0, cy: 0, opacity: 0 });
+  // pinned: a dot tooltip clicked open — it ignores hover until dismissed
+  // (click elsewhere / Esc), so its source link can be reached and clicked.
+  const [tipState, setTipState] = useState({ r: null, l: null, cx: 0, cy: 0, opacity: 0, pinned: false });
   const lastTip = useRef(null);
   const fadeTimer = useRef(null);
+  const downAt = useRef(null);
   const dotPositions = useRef([]);
   const scaleRef = useRef(null); // plot scales, captured by FinDots each render
   const chartRef = useRef(null);
@@ -834,8 +848,51 @@ function FinanceChart({ isMobile, vpH }) {
   const xDomain = [zoom.x0, zoom.x1];
   const yDomain = [Math.exp(zoom.ly0 ?? Math.log(yLo)), Math.exp(zoom.ly1 ?? Math.log(yHi))];
 
+  const fadeTip = useCallback(() => {
+    setTipState(prev => ({ ...prev, opacity: 0, pinned: false }));
+    clearTimeout(fadeTimer.current);
+    fadeTimer.current = setTimeout(() => {
+      setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
+    }, 1000);
+  }, []);
+  const nearestDot = (e) => {
+    const el = chartRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    let hit = null, best = 18;
+    for (const dp of dotPositions.current) {
+      const dist = Math.hypot(dp.cx - mx, dp.cy - my);
+      if (dist < best) { best = dist; hit = dp; }
+    }
+    return hit;
+  };
+  // Click a dot to pin its tooltip; click anywhere else in the chart to unpin.
+  // A drag (pan) that happens to end on a dot is not a click.
+  const onClick = useCallback((e) => {
+    if (e.target.closest?.("[data-fintip]")) return;
+    const d = downAt.current;
+    if (d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) > 4) return;
+    const hit = nearestDot(e);
+    if (hit) {
+      clearTimeout(fadeTimer.current);
+      setTipState({ r: hit.r, l: null, cx: hit.cx, cy: hit.cy, opacity: 1, pinned: true });
+    } else if (tipState.pinned) fadeTip();
+  }, [tipState.pinned, fadeTip]);
+  useEffect(() => {
+    if (!tipState.pinned) return;
+    const onKey = e => { if (e.key === "Escape") fadeTip(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tipState.pinned, fadeTip]);
   const onMouseMove = useCallback((e) => {
-    if (isPanning.current) return;
+    if (isPanning.current || tipState.pinned) return;
+    // Cursor on an open dot tooltip (heading for its source link): hold it open.
+    if (e.target.closest?.("[data-fintip]")) {
+      clearTimeout(fadeTimer.current);
+      if (tipState.opacity < 1) setTipState(prev => ({ ...prev, opacity: 1 }));
+      return;
+    }
     const el = chartRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -868,15 +925,16 @@ function FinanceChart({ isMobile, vpH }) {
         setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
       }, 1000);
     }
-  }, [tipState.opacity, visComps, fits, firstTs]);
+  }, [tipState.opacity, tipState.pinned, visComps, fits, firstTs]);
   const onMouseLeave = useCallback(() => {
+    if (tipState.pinned) return;
     if (tipState.r || tipState.l) {
       setTipState(prev => ({ ...prev, opacity: 0 }));
       fadeTimer.current = setTimeout(() => {
         setTipState(prev => prev.opacity === 0 ? { ...prev, r: null, l: null } : prev);
       }, 1000);
     }
-  }, [tipState.r, tipState.l]);
+  }, [tipState.r, tipState.l, tipState.pinned]);
 
   const FinDots = (props) => {
     const xM = props.xAxisMap, yM = props.yAxisMap;
@@ -893,7 +951,7 @@ function FinanceChart({ isMobile, vpH }) {
       if (isNaN(cx) || isNaN(cy)) return null;
       if (cx >= px0 && cx <= px1 && cy >= py0 && cy <= py1) positions.push({ r, cx, cy });
       const c = COL[r.c];
-      return (<g key={r.c + r.d + i} className="mp">
+      return (<g key={r.c + r.d + i} className="mp" data-c={r.c} data-d={r.d} data-cx={cx} data-cy={cy}>
         <circle cx={cx} cy={cy} r={4.5} fill={c}/>
         <text className="ml" x={cx + 8} y={cy - 8} fill={c} fontSize={11}
           fontFamily={FONT} fontWeight={500}>{FIN_NAME[r.c]}</text>
@@ -938,7 +996,8 @@ function FinanceChart({ isMobile, vpH }) {
     </p>
     <div style={{display:"flex",gap:0,marginBottom:10,fontFamily:FONT_D,fontSize:12}}>
       {[["rev","Revenue"],["val","Valuations"]].map(([s,lb],i)=>(
-        <button key={s} onClick={()=>{setSeries(s);resetZoom();}} style={{
+        <button key={s} onClick={()=>{setSeries(s);resetZoom();
+          setTipState(prev=>({...prev, r:null, l:null, opacity:0, pinned:false}));}} style={{
           background:series===s?"#2a2a40":"transparent",color:series===s?"#eee":"#777",
           border:"1px solid #444",borderLeft:i===0?"1px solid #444":"none",
           borderRadius:i===0?"6px 0 0 6px":"0 6px 6px 0",
@@ -946,7 +1005,8 @@ function FinanceChart({ isMobile, vpH }) {
       ))}
     </div>
     <div ref={chartRef} style={{position:"relative",cursor:isZoomed?"grab":"default"}}
-      onMouseDown={onPanStart} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
+      onMouseDown={e=>{downAt.current=[e.clientX,e.clientY]; onPanStart(e);}}
+      onMouseMove={onMouseMove} onMouseLeave={onMouseLeave} onClick={onClick}>
       {lastTip.current && (()=>{
         const {r,l,cx,cy}=lastTip.current;
         const key = (r||l).c;
@@ -957,13 +1017,21 @@ function FinanceChart({ isMobile, vpH }) {
           fontFamily:FONT,fontSize:13,color:"#ccc",lineHeight:1.7,pointerEvents:"none",zIndex:10,
           minWidth:170,opacity:tipState.opacity,transition:"opacity 1s"};
         if (r) {
-          const ds=new Date(r.d).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
-          return (<div style={box}>
+          const ds=fmtDay(r.d);
+          // Dot tooltips with a source link take the pointer so the link can be
+          // clicked; onFinMouseMove keeps them open while the cursor is on them.
+          // Only a live tooltip with a link takes the pointer; a faded-out one
+          // must not sit invisibly over the dots.
+          return (<div data-fintip style={{...box, pointerEvents: tipState.r && r.src ? "auto" : "none"}}
+            onMouseDown={e=>e.stopPropagation()}>
             <div style={{fontWeight:700,color:COL[r.c],marginBottom:2}}>{FIN_NAME[r.c]}</div>
             <div>{ds}</div>
             <div>{r.s==="rev"?"Annualized revenue":"Valuation"}: <b style={{color:"#eee"}}>{fmtUSD(r.v)}</b></div>
             {r.t && <div style={{fontSize:11,color:"#8fa8c8"}}>{r.t}{r.cf?` · ${r.cf.toLowerCase()}`:""}</div>}
-            {r.src && <div style={{fontSize:11,color:"#777"}}>via {r.src}</div>}
+            {r.note && <div style={{fontSize:11,color:"#bbb",fontStyle:"italic"}}>{r.note}</div>}
+            {r.src && <div style={{fontSize:11,color:"#777"}}>via <SrcLink url={r.src}/></div>}
+            {r.src && <div style={{fontSize:10,color:"#666"}}>
+              {tipState.pinned ? "pinned · click elsewhere or Esc to close" : "click the dot to pin"}</div>}
           </div>);
         }
         // Trend-line hover: where the fit says this company "should" be at the
@@ -971,14 +1039,14 @@ function FinanceChart({ isMobile, vpH }) {
         // guard it. Tooltip stays put during the fadeout (no live cursor data),
         // matching the dot behavior.
         const lf = FIN_FITS[series][l.c];
-        const ds=new Date(l.ts).toLocaleString("en-US",{month:"short",year:"numeric"});
+        const ds=fmtDay(l.ts);
         return (<div style={box}>
           <div style={{fontWeight:700,color:COL[l.c],marginBottom:2}}>{FIN_NAME[l.c]} trend</div>
           <div>{ds}</div>
           <div>{series==="rev"?"Trend revenue":"Trend valuation"}: <b style={{color:"#eee"}}>{fmtUSD(l.v)}</b></div>
           {lf && lastPt[l.c] && l.ts >= lastPt[l.c].ts && (()=>{ const lp = lastPt[l.c];
             return (<div>Trend from last report{" "}
-              ({new Date(lp.d).toLocaleString("en-US",{month:"short",year:"numeric"})}, {fmtUSD(lp.v)}):{" "}
+              ({fmtDay(lp.d)}, {fmtUSD(lp.v)}):{" "}
               <b style={{color:"#eee"}}>{fmtUSD(lp.v * Math.exp(lf.a * (l.ts - lp.ts) / YR_MS))}</b></div>);})()}
           {lf && <div style={{fontSize:11,color:"#8fa8c8"}}>
             {Math.exp(lf.a).toFixed(1)}×/yr OLS fit (n={lf.n}, R²={lf.r2.toFixed(2)})</div>}
@@ -1497,8 +1565,7 @@ function App() {
     if (!active||!payload?.length) return null;
     const ts=payload[0]?.payload?.ts;
     if (!ts) return null;
-    const d=new Date(ts);
-    const ds=d.toLocaleString("en-US",{month:"short",year:"numeric"});
+    const ds=fmtDay(ts);
     return (<div style={{background:"#1a1a2e",border:"1px solid #444",borderRadius:6,padding:"8px 12px",fontFamily:FONT,fontSize:12,color:"#ccc"}}>
       <div style={{fontWeight:700,marginBottom:4}}>{ds}</div>
       {payload.map(p=>{
@@ -1578,8 +1645,7 @@ function App() {
         <div ref={chartRef} style={{position:"relative",cursor:isZoomed?"grab":"default"}} onMouseDown={onPanStart} onMouseMove={onChartMouseMove} onMouseLeave={onChartMouseLeave}>
         {lastTip.current && (()=>{
           const {model:m,cx,cy}=lastTip.current;
-          const d=new Date(m.d);
-          const ds=d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric"});
+          const ds=fmtDay(m.d);
           const containerW = chartRef.current ? chartRef.current.getBoundingClientRect().width : 900;
           const flipX=cx>containerW*0.6;
           return (<div style={{position:"absolute",left:flipX?Math.max(4,cx-180):cx+20,top:Math.max(10,cy-40),

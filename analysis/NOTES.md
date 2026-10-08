@@ -36,7 +36,25 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 - `data/ai_companies_revenue_reports.csv` / `data/ai_companies_funding_rounds.csv`
   — Epoch AI "AI Companies" hub download (Aug 17 2026 snapshot; CC-BY 4.0,
   cite epoch.ai/data/ai-companies).
-  Feeds the finance chart via `finance_data.py`. Refresh straight from
+  Feeds the finance chart via `finance_data.py`.
+- `data/finance_supplements.csv` — owner-supplied reports Epoch hasn't
+  ingested, merged in by `finance_data.py` under exactly the same inclusion
+  and fit rules as Epoch's rows. Each row carries a `note` the tooltip shows
+  (how the figure was reported). On every Epoch refresh, delete any
+  supplement Epoch now carries, or it double-counts.
+  - OpenAI rev $50B, 2026-09-30 (owner's call, Oct 8 2026): an FT report of
+    an OpenAI investor document putting annualized revenue "approaching
+    $50bn" — so $50B is the generous end; the real figure could be ~$48B.
+    Type left blank (the reporting doesn't say ARR vs run rate).
+  - **Known conflict for the next Epoch refresh:** Epoch's live CSV (checked
+    Oct 8) already has OpenAI at **$70B on 2026-09-29**, sourced to a
+    different FT article and matching an Axios scoop ("ARR nears $70B").
+    The owner's read: that figure is garbled from investor *projections*,
+    while the $50B comes from an actual OpenAI investor document. Our
+    committed snapshot (Aug 17) predates the row, so it is not in the chart
+    yet. A refresh will bring it in under the uniform rule; decide then
+    (exclusion would be the finance chart's first per-row exception — if
+    made, document it here and show it in the UI). Refresh straight from
   `https://epoch.ai/data/ai_companies_revenue_reports.csv` and
   `https://epoch.ai/data/ai_companies_funding_rounds.csv` (updated ~weekly),
   then regenerate with `--emit-js`. A refresh that adds a company not yet in
@@ -374,6 +392,15 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Oct 4 it is Opus 5.5 in all three views (predicted TH, measured ECI and
   AECI). With "show tested models only" on, derived points are hidden
   and the anchor reverts to the newest measured point.
+- **Tooltips**: every date is day-level ("Sep 30, 2026"), trend-line hovers
+  included, via one `fmtDay` that formats in UTC. Data dates are ISO day
+  strings that parse as UTC midnight; local-time formatting showed the
+  previous day to anyone west of Greenwich (the owner, in DC, saw every
+  report one day early). The render test runs in America/New_York to catch
+  a regression. Finance sources are kept as full URLs and shown as clickable
+  outlet links; since hover tooltips vanish when the cursor crosses another
+  dot, clicking a dot pins its tooltip (click elsewhere or Esc to close),
+  which also makes the links reachable by tap on phones.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold covers
   DeepSeek, Moonshot, MiniMax and Mistral). The non-gold hues — xAI #2fbcd3,
@@ -428,6 +455,18 @@ anchored-at-full-slope too high past ~6 weeks. The refreshed fit is
 10.94x/yr (n=15) — the new point pulled it UP, since $65B sits above even
 the steep line.
 
+Fourth observation (Oct 8 2026, owner-supplied FT report): OpenAI
+"approaching $50bn" annualized at Sep 30. The pre-update OLS fit (3.88x/yr,
+n=16) put Sep 30 at $59.4B — the report is 0.84x of that. That makes two
+OpenAI observations where the OLS line ran high (the first was ~30% over),
+against two Anthropic ones where it ran low: the plain fit misses in
+whichever direction a company's recent pace differs from its average. The "trend from last report"
+reading (Aug 13's $40B at the fitted slope) said $47.8B: 1.05x at the
+generous $50B entry, ~1.00x if the true figure is nearer $48B. Implied
+Aug 13 -> Sep 30 growth: ~5.5x/yr at $50B. Four observations in, the
+anchored reading has been the better six-week-ish forecaster every time.
+With the point added, the OpenAI fit is 3.82x/yr (n=17, R² 0.970).
+
 ## Refreshing the finance data
 
 Epoch updates the AI-companies CSVs roughly weekly. To refresh:
@@ -450,6 +489,8 @@ Things a refresh can surface, and what to do:
   `index.html`; validate any new color (see the finance-chart colors note).
 - **A company crosses n=4** → it gains a trend line automatically. That is the
   uniform rule working, not something to review away.
+- **Supplements now in Epoch** — check `data/finance_supplements.csv`
+  against the refreshed CSV and delete any row Epoch now carries.
 - **Revised history** — Epoch edits old rows, not just appends. The diff of the
   committed CSVs shows exactly what moved; quote any notable revision in the
   commit message. Fits can drift on a refresh even with no new reports.

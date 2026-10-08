@@ -15,7 +15,10 @@ const LOCAL = {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium' });
-  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  // New York time: data dates are UTC-midnight ISO days, so a local-time
+  // formatter would show the previous day here (regression check below).
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 },
+                                       timezoneId: 'America/New_York' });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
@@ -201,6 +204,52 @@ const LOCAL = {
     await page.mouse.move(finDot.x + 200, finDot.y - 100);
     await page.waitForTimeout(300);
   }
+  // OpenAI's owner-supplied Sep 30 2026 report (finance_supplements.csv):
+  // right day in a US time zone, its note, and a source link that stays
+  // clickable while the cursor travels from the dot onto the tooltip.
+  const oaiDot = await page.evaluate(() => {
+    const g = document.querySelector('g[data-c="openai"][data-d="2026-09-30"]');
+    if (!g) return null;
+    g.scrollIntoView({ block: 'center' });
+    const svg = g.ownerSVGElement, pt = svg.createSVGPoint();
+    pt.x = +g.dataset.cx; pt.y = +g.dataset.cy;
+    const p = pt.matrixTransform(svg.getScreenCTM());
+    return { x: p.x, y: p.y };
+  });
+  if (!oaiDot) failures.push('finance rev: OpenAI 2026-09-30 supplement dot missing');
+  else {
+    await page.mouse.move(oaiDot.x, oaiDot.y);
+    await page.waitForTimeout(600);
+    const tip = await page.evaluate(() => document.querySelector('[data-fintip]')?.innerText || '');
+    if (!tip.includes('Sep 30, 2026')) failures.push(`finance rev: supplement dot date wrong (${tip.split('\n')[1]})`);
+    if (!tip.includes('approaching $50bn, per the FT')) failures.push('finance rev: supplement note missing');
+    const link = await page.evaluate(() => {
+      const a = document.querySelector('[data-fintip] a[href*="ft.com"]');
+      if (!a) return null;
+      const r = a.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    if (!link) failures.push('finance rev: FT source link missing from tooltip');
+    else {
+      // Click to pin, then travel to the link. The straight path crosses the
+      // Aug 13 OpenAI dot, which would steal an unpinned hover tooltip.
+      await page.mouse.click(oaiDot.x, oaiDot.y);
+      await page.waitForTimeout(300);
+      await page.mouse.move(link.x, link.y, { steps: 15 });
+      await page.waitForTimeout(1300); // longer than the 1s fade
+      const clickable = await page.evaluate(({ x, y }) =>
+        !!document.elementFromPoint(x, y)?.closest('[data-fintip] a[href*="ft.com"]'), link);
+      if (!clickable) failures.push('finance rev: pinned tooltip source link not clickable');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(1300);
+      if (await page.evaluate(() => {
+        const t = document.querySelector('[data-fintip]');
+        return t && parseFloat(getComputedStyle(t).opacity) > 0.05;
+      })) failures.push('finance rev: Esc did not close the pinned tooltip');
+    }
+    await page.mouse.move(oaiDot.x + 300, oaiDot.y - 150);
+    await page.waitForTimeout(1300);
+  }
   // hover the xAI trend LINE itself, 75% along its path (past the last xAI
   // dot, so the dots-win-over-lines priority can't intercept the hit)
   const xaiLinePt = () => page.evaluate(() => {
@@ -222,6 +271,9 @@ const LOCAL = {
       failures.push('finance rev: trend-line hover tooltip missing');
     if (!await page.evaluate(() => document.body.innerText.includes('Trend from last report')))
       failures.push('finance rev: anchored-trend reading missing from tooltip');
+    // trend hovers give a day, not just month + year
+    if (!await page.evaluate(() => /xAI trend\s+[A-Z][a-z]{2} \d{1,2}, \d{4}/.test(document.body.innerText)))
+      failures.push('finance rev: trend tooltip date is not day-level');
     await page.screenshot({ path: 'chart_fin_line_tip.png' });
     // 40px above the line is outside the 5px hit band: the tooltip should fade
     // (it stays in the DOM at opacity 0, like the main chart's, so test the

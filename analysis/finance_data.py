@@ -6,6 +6,10 @@ Snapshots live in data/ai_companies_revenue_reports.csv and
 data/ai_companies_funding_rounds.csv; refresh them from
   https://epoch.ai/data/ai_companies_revenue_reports.csv
   https://epoch.ai/data/ai_companies_funding_rounds.csv
+data/finance_supplements.csv holds owner-supplied reports Epoch hasn't
+ingested yet. They pass through the same inclusion and fit rules as Epoch's
+rows and carry a `note` the tooltip shows; delete a row once Epoch carries
+the same report, or it double-counts.
 
 One uniform inclusion rule per series, no per-company exceptions:
   revenue:   Scope == "Full company" AND a date AND an annualized USD figure.
@@ -34,6 +38,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 REV_CSV = HERE / "data" / "ai_companies_revenue_reports.csv"
 FUND_CSV = HERE / "data" / "ai_companies_funding_rounds.csv"
+SUPP_CSV = HERE / "data" / "finance_supplements.csv"
 HTML = HERE.parent / "index.html"
 
 # Epoch company name -> the chart's lab key (COL / FIN_NAME in index.html).
@@ -62,9 +67,15 @@ MIN_FIT_N = 4
 T0 = date(2024, 1, 1)  # fit epoch: a = ln-slope per year, b = ln(USD) at T0
 
 
-def _host(url):
-    m = re.match(r"https?://(?:www\.)?([^/]+)", url or "")
-    return m.group(1) if m else ""
+def _url(src):
+    """The source link the tooltip shows (host as text, URL as the link).
+    Only http(s) URLs; tracking query strings are dropped."""
+    url = (src or "").strip().split("?")[0]
+    if not re.match(r"https?://[^/\s]+", url):
+        return ""
+    if '"' in url or "\\" in url:
+        sys.exit(f"source URL would break the generated JS: {url!r}")
+    return url
 
 
 def _key(name):
@@ -86,7 +97,7 @@ def load_rows():
                 "v": float(r["Annualized revenue (USD)"]),
                 "t": REV_TYPE_SHORT.get(r["Annualized revenue type"],
                                         r["Annualized revenue type"]),
-                "cf": r["Confidence"], "src": _host(r["Source 1"]),
+                "cf": r["Confidence"], "src": _url(r["Source 1"]), "note": "",
             })
     with open(FUND_CSV, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
@@ -97,7 +108,17 @@ def load_rows():
                 "c": _key(r["Company"]), "s": "val", "d": r["Close date"],
                 "v": float(r["Valuation (post-money)"]),
                 "t": (r["Type"].lower() + " round").strip(),
-                "cf": r["Confidence"], "src": _host(r["Source 1"]),
+                "cf": r["Confidence"], "src": _url(r["Source 1"]), "note": "",
+            })
+    with open(SUPP_CSV, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if '"' in r["note"]:
+                sys.exit(f"supplement note would break the generated JS: {r['note']!r}")
+            rows.append({
+                "c": _key(r["company"]), "s": r["series"], "d": r["date"],
+                "v": float(r["value_usd"]), "t": r["type"],
+                "cf": r["confidence"], "src": _url(r["source_url"]),
+                "note": r["note"],
             })
     rows.sort(key=lambda r: (r["s"], r["c"], r["d"]))
     return rows
@@ -135,8 +156,9 @@ def emit_js(rows, fits):
     out.append("const FIN_RAW = [")
     for r in rows:
         v = f"{r['v']:.0f}"
+        note = f', note: "{r["note"]}"' if r["note"] else ""
         out.append(f'  {{ c: "{r["c"]}", s: "{r["s"]}", d: "{r["d"]}", v: {v}, '
-                   f't: "{r["t"]}", cf: "{r["cf"]}", src: "{r["src"]}" }},')
+                   f't: "{r["t"]}", cf: "{r["cf"]}", src: "{r["src"]}"{note} }},')
     out.append("];")
     out.append("// ln(USD) = b + a*(years since 2024-01-01); OLS per company, n >= "
                f"{MIN_FIT_N} points.")
@@ -161,8 +183,8 @@ def check_html(rows, fits):
             ok = False
 
     raw = re.findall(r'\{ c: "(\w+)", s: "(\w+)", d: "([\d-]+)", v: (\d+), '
-                     r't: "([^"]*)", cf: "([^"]*)", src: "([^"]*)" \}', html)
-    want_raw = [(r["c"], r["s"], r["d"], f"{r['v']:.0f}", r["t"], r["cf"], r["src"])
+                     r't: "([^"]*)", cf: "([^"]*)", src: "([^"]*)"(?:, note: "([^"]*)")? \}', html)
+    want_raw = [(r["c"], r["s"], r["d"], f"{r['v']:.0f}", r["t"], r["cf"], r["src"], r["note"])
                 for r in rows]
     if len(raw) != len(want_raw):
         print(f"[MISMATCH] FIN_RAW row count: script={len(want_raw)} html={len(raw)}")

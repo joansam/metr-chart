@@ -1,0 +1,2 @@
+company,series,date,value_usd,type,confidence,source_url,note
+OpenAI,rev,2026-09-30,50000000000,,Likely,https://www.ft.com/content/b66a9858-f8fb-46cb-b506-44bfe26fca2a,"approaching $50bn, per the FT"
