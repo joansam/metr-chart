@@ -19,13 +19,14 @@ Data sources:
       Horizons as one of ~60 input benchmarks, so fit 2 is slightly circular;
       the measured effect is <2% on any prediction (see analysis/NOTES.md).
     - AECI: analysis/data/aeci_systemcards.csv - one vintage only: the
-      "Anthropic ECI over time" chart in the Claude Opus 5.5 system card
-      (Sep 22 2026), Table 2.3.5.3.A + Figure 2.3.5.3.B. Five points (Mythos
-      Preview through Opus 5.5) are quoted in the card's table; the rest are
-      digitized from the figure (see analysis/NOTES.md). Anthropic rerun the
-      ECI fit globally at each release, so values drift between cards
-      (Mythos 5.1: 161.98 in its own card -> 168.12 here), which is why
-      vintages are never mixed. See the `source` column.
+      "Anthropic ECI over time" chart in the Claude Fable 5.2 & Mythos 5.2
+      system card (Nov 9 2026; fit dated Nov 6), Table 2.3.5.3.A + Figure
+      2.3.5.3.B. Six points (Mythos Preview through Mythos 5.2) are quoted in
+      the card's table; the rest are digitized from the figure (see
+      analysis/NOTES.md). Anthropic rerun the ECI fit globally at each
+      release, so values drift between cards (Mythos 5.1: 161.98 in its own
+      card -> 168.12 in Opus 5.5's -> 172.62 here), which is why vintages are
+      never mixed. See the `source` column.
 
 Usage:
     python analysis/eci_conversions.py               # print fits + tables
@@ -90,6 +91,12 @@ MODELS = {
     # Opus 5.5 (Sep 22 2026): both indices measured (its own card's AECI and
     # Epoch's ECI), so like Opus 5 it joins the ECI<->AECI fit basis.
     "Claude Opus 5.5":         (None,                                 "Claude Opus 5.5",                  "anthropic"),
+    # Mythos 5.2 / Fable 5.2 (Nov 9 2026): the same split again. The card's
+    # AECI point is Mythos 5.2; Fable 5.2 waits for Epoch's ECI and appears
+    # automatically once eci_scores.csv carries a "Claude Fable 5.2" row
+    # (a row with no index and no METR run is skipped everywhere).
+    "Claude Mythos 5.2":       (None,                                 None,                               "anthropic"),
+    "Claude Fable 5.2":        (None,                                 "Claude Fable 5.2",                 "anthropic"),
     "GPT-4":                   ("gpt_4",                              "GPT-4 (Mar 2023)",                 "openai"),
     "GPT-4 Turbo":             ("gpt_4_turbo_inspect",                "GPT-4 Turbo (Apr 2024)",           "openai"),
     "GPT-4o":                  ("gpt_4o_inspect",                     "GPT-4o (May 2024)",                "openai"),
@@ -98,6 +105,9 @@ MODELS = {
     "o3":                      ("o3_inspect",                         "o3",                               "openai"),
     "GPT-5":                   ("gpt_5_2025_08_07_inspect",           "GPT-5",                            "openai"),
     "GPT-5.2":                 ("gpt_5_2",                            "GPT-5.2",                          "openai"),
+    # Epoch dropped GPT-5.3 Codex from its Nov 2026 file (like Codex Max
+    # before it), so it is now "estimated from TH" and leaves the ECI fits.
+    # The key stays so it comes back automatically if Epoch restores it.
     "GPT-5.3 Codex":           ("gpt_5_3_codex",                      "GPT-5.3 Codex",                    "openai"),
     "GPT-5.4":                 ("gpt_5_4",                            "GPT-5.4",                          "openai"),
     "GPT-5.5":                 (None,                                 "GPT-5.5",                          "openai"),
@@ -105,8 +115,14 @@ MODELS = {
     # GPT-6 Astra: the GPT-6 flagship (Sol/Luna are the cheaper tiers). ECI only;
     # no METR run, so it routes through the openai lab-adjusted ECI fit.
     "GPT-6 Astra":             (None,                                 "GPT-6 Astra",                      "openai"),
+    # GPT-6.1 Sol: top-scoring model of the GPT-6.1 release (Terra is the
+    # lower tier), so it is the generation's flagship by the same rule.
+    "GPT-6.1 Sol":             (None,                                 "GPT-6.1 Sol",                      "openai"),
     "Gemini 3 Pro":            ("gemini_3_pro",                       "Gemini 3 Pro",                     "google"),
     "Gemini 3.1 Pro":          ("gemini_3_1_pro",                     "Gemini 3.1 Pro",                   "google"),
+    # Google's next flagship (Epoch lists it as limited access). No METR run;
+    # routes through the google lab-adjusted ECI fit.
+    "Gemini 4 Argon":          (None,                                 "Gemini 4 Argon",                   "google"),
     # Open-weights reference models (open-vs-closed gap): public ECI only, no
     # METR run and no AECI, so they never enter any fit. Their labs have no
     # METR data either, so predictions fall back to the pooled ECI fit.
@@ -152,10 +168,16 @@ PREDICTED_DATES = {
     "Claude Mythos 5.1":     "2026-09-01",
     "Claude Fable 5.1":      "2026-09-01",
     "Claude Opus 5.5":       "2026-09-22",
+    # System-card date (the card's chart plots the internal-release date,
+    # ~Oct 1, as it did for the earlier models).
+    "Claude Mythos 5.2":     "2026-11-09",
+    "Claude Fable 5.2":      "2026-11-09",
     "GPT-5.5":               "2026-04-23",
     "GPT-5.6 Sol":           "2026-07-09",
     # Announced (and dated by Epoch) Sep 3; public/API release was Sep 4.
     "GPT-6 Astra":           "2026-09-03",
+    "GPT-6.1 Sol":           "2026-09-29",
+    "Gemini 4 Argon":        "2026-09-30",
     "DeepSeek-R1":           "2025-01-20",
     "GLM-5.2":               "2026-06-16",
     "Kimi K3":               "2026-07-16",
@@ -508,7 +530,7 @@ def report(rows, fits, eci_all):
             print(f"{r['name']:24s} ECI  {r['eci']:6.2f} -> implied AECI {f['predict'](r['eci']):6.1f}")
     print("\nBarry's Jun 20 post predictions (Mythos 5: p50 61.3 h, p80 8.2 h) were"
           " made on the Fable 5 card's AECI vintage; the current file is the"
-          " Opus 5.5 vintage, so they no longer reproduce exactly (see NOTES.md).")
+          " Fable 5.2 vintage, so they no longer reproduce exactly (see NOTES.md).")
 
 
 def convert(fits, eci=None, aeci=None, lab=None):

@@ -1,14 +1,15 @@
 model,aeci,aeci_ci_low,aeci_ci_high,source
-Claude 3 Opus,125.1,120.8,126.6,opus55_card
-Claude 3.5 Sonnet,130.0,130.0,130.0,opus55_card
-Claude 3.5 Sonnet (new),133.5,131.5,135.4,opus55_card
-Claude 3.7 Sonnet,140.4,139.2,142.8,opus55_card
-Claude Opus 4,143.4,141.6,145.3,opus55_card
-Claude Sonnet 4.5,146.8,144.5,149.6,opus55_card
-Claude Opus 4.5,149.8,147.5,153.0,opus55_card
-Claude Opus 4.6,154.3,151.6,157.6,opus55_card
-Claude Mythos Preview,161.88,158.30,166.73,opus55_card
-Claude Mythos 5,164.49,160.63,170.26,opus55_card
-Claude Opus 5,165.18,161.16,171.11,opus55_card
-Claude Mythos 5.1,168.12,163.92,174.99,opus55_card
-Claude Opus 5.5,169.36,165.23,177.05,opus55_card
+Claude 3 Opus,124.7,122.9,126.1,fable52_card
+Claude 3.5 Sonnet,130.0,130.0,130.0,fable52_card
+Claude 3.5 Sonnet (new),133.6,132.0,135.0,fable52_card
+Claude 3.7 Sonnet,141.5,139.4,143.5,fable52_card
+Claude Opus 4,144.7,142.4,146.3,fable52_card
+Claude Sonnet 4.5,147.7,145.7,149.7,fable52_card
+Claude Opus 4.5,152.2,149.9,154.6,fable52_card
+Claude Opus 4.6,157.1,155.2,159.9,fable52_card
+Claude Mythos Preview,165.71,162.70,169.65,fable52_card
+Claude Mythos 5,168.68,165.24,172.99,fable52_card
+Claude Opus 5,169.40,165.83,173.89,fable52_card
+Claude Mythos 5.1,172.62,168.51,177.63,fable52_card
+Claude Opus 5.5,174.78,170.33,180.29,fable52_card
+Claude Mythos 5.2,177.12,172.42,182.94,fable52_card

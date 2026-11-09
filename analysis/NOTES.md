@@ -12,7 +12,7 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 ## Data provenance
 
 - `../benchmark_results_1_1 (5).yaml` — METR-Horizon-v1.1 ground truth.
-- `data/eci_scores.csv` — Epoch AI Benchmarking Hub download (Oct 4 2026,
+- `data/eci_scores.csv` — Epoch AI Benchmarking Hub download (Nov 9 2026,
   CC-BY 4.0, cite epoch.ai/benchmarks), copied verbatim from the
   `epoch_capabilities_index/eci_scores.csv` member of
   `https://epoch.ai/data/benchmark_data.zip` (the "LLM Benchmark Data" link on
@@ -31,8 +31,12 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   little — Jul 15 -> Jul 24 moved tracked models by at most 0.3 pts, and
   Jul 24 -> Aug 2 by up to 1.8 (Kimi K3), and Aug 2 -> Oct 4 by up to 1.9
   (Opus 5 161.05 -> 162.94; GPT-5.3 Codex +1.2, Fable 5 +0.7, most others
-  within ±0.5), so never treat a refresh as a no-op: regenerate the arrays
-  and re-check the stats quoted in BASIS_DOC.
+  within ±0.5), and Oct 4 -> Nov 9 lifted the top of the scale 1–2.6 (GPT-6
+  Astra 166.51 -> 169.07, Fable 5.1 +2.1, Fable 5 +2.0, Opus 5 +1.5, Opus 5.5
+  +1.0; older models mostly within ±0.5), so never treat a refresh as a
+  no-op: regenerate the arrays and re-check the stats quoted in BASIS_DOC.
+  Epoch also *drops* rows on a refresh: the Nov 9 file has no GPT-5.3 Codex
+  (and ~30 smaller models), the same way Codex Max vanished by Oct 4.
 - `data/ai_companies_revenue_reports.csv` / `data/ai_companies_funding_rounds.csv`
   — Epoch AI "AI Companies" hub download (Aug 17 2026 snapshot; CC-BY 4.0,
   cite epoch.ai/data/ai-companies).
@@ -49,7 +53,35 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   agree on the models they share, and the Sep 1 2026 card broke that (Mythos 5
   161.29 -> 159.46, Opus 5 162.1 -> 160.73, both well inside their CIs but a
   full ~1.5 points), so the whole file was replaced rather than appended to.
-  - `opus55_card` (current) — the Claude Opus 5.5 system card (Sep 22 2026,
+  - `fable52_card` (current) — the Claude Fable 5.2 & Claude Mythos 5.2
+    system card (Nov 9 2026; uploaded by the owner as a 4-page print of
+    pp. 36–39, because assets.claude.com — where Anthropic now hosts the
+    cards — is blocked in these sessions), §2.3.5. Anthropic refit on a
+    Nov 6 basket (371 benchmarks, 10,803 observations, 1,026 models) with
+    fixes for misconfigured long-context benchmarks, and again says values
+    are not comparable with earlier cards. Frontier models rose 3.8–5.4
+    (Opus 5.5 169.36 -> 174.78, Mythos 5.1 168.12 -> 172.62, Mythos Preview
+    161.88 -> 165.71); the METR-calibration models rose 0–2.8 (Opus 4.6
+    154.3 -> 157.1, Opus 4.5 +2.4) and 3 Opus fell 0.4. File replaced whole.
+    Six rows are verbatim from Table 2.3.5.3.A (Mythos Preview, Mythos 5,
+    Opus 5, Mythos 5.1, Opus 5.5, Mythos 5.2 — 177.12 [172.42, 182.94]); the
+    other eight are digitized from Figure 2.3.5.3.B (2000x1300 raster, same
+    style; 11.48 px per AECI point from the seven gridlines, max residual
+    0.43 px). Dot centres were read as the midpoint of the dot's vertical
+    chords just left and right of the whisker (the violet bar, black whisker
+    and pink trend line all cross the dots, so plain blob centroids fail).
+    Against the five tabulated points it reads centres within 0.05 (Mythos 5
+    +0.14, Opus 5.5 +0.19 where dots overlap) and whisker ends within 0.1,
+    reading caps ~0.06 low on average; recorded to one decimal, good to
+    ~±0.2. Sonnet 3.5 anchors at 130 with no CI.
+    Not used: the card's unreleased "Internal Model" (178.78 [173.75,
+    185.18], scored on only 15 benchmarks). The chart plots released models
+    on their release dates and that one has neither; this is the chart's
+    scope, not a fit exception. Note the card's own trend fits DO include it.
+    Like its predecessors, this chart omits Opus 4.1/4.7/4.8; it also plots
+    on *internal* release dates (Mythos 5.2 ~Oct 1), whereas this chart uses
+    public/system-card dates.
+  - Superseded: `opus55_card` — the Claude Opus 5.5 system card (Sep 22 2026,
     www-cdn.anthropic.com/fc1b44717c85dc068bc6ba5024219938094694bd/), §2.3.5.
     Anthropic changed the AECI benchmark basket (338 -> 374 benchmarks,
     525 -> 732 models) and refit; the card says outright that values are not
@@ -98,8 +130,9 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   public ECI measures the GA Fable 5. Same underlying model, different
   deployment variants — kept as separate rows, and the cross-variant pair is
   excluded from the ECI<->AECI fit basis (n=10 within-variant Claude pairs on
-  the Opus 5.5 vintage; n=9 on Fable 5.1; n=11 before Opus 4.7/4.8 lost their
-  AECI). Mythos 5.1 / Fable 5.1 are split the same way.
+  the Opus 5.5 and Fable 5.2 vintages; n=9 on Fable 5.1; n=11 before Opus
+  4.7/4.8 lost their AECI). Mythos 5.1 / Fable 5.1 and Mythos 5.2 / Fable
+  5.2 are split the same way.
 - **Provenance tiers**: measured > imputed (one index derived from the other
   via the ECI<->AECI line) > estimated (both indices derived from a measured
   METR horizon). **Only measured values set a score frontier.** Imputed and
@@ -124,7 +157,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 - **Estimation/prediction routes are lab-consistent**: Anthropic models go
   through the Claude-only AECI fit; other labs through the lab-adjusted
   (per-lab-intercept) ECI fit. The pooled fit misprices Claude models, which
-  earn ~1.5x the horizon per capability point (see the ANCOVA intercepts).
+  earn more horizon per capability point (see the ANCOVA intercepts: ~1.5x
+  OpenAI through Oct 2026, ~1.3x on the Nov 9 data).
 - **Why the fits carry no per-model exceptions.** The bar for special-casing is
   high here for a scientific reason, not a stylistic one: every hand-added
   exception is a researcher degree of freedom, and enough of them would let
@@ -230,6 +264,53 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
     all join — Astra is a measured ECI record on its Sep 3 date). The card's own historical fit is 14.7/yr plus a one-time
     +5.9 jump at Mythos Preview — the chart's uniform running-max OLS reads
     that jump as slope.
+- **AECI vintage swap + Epoch refresh, Nov 9 2026 (Fable 5.2 / Mythos 5.2
+  card).** Same uniform rules as Sep 1 and Oct 4: the AECI file is the
+  latest card, whole; the ECI file is Epoch's latest, whole.
+  - *What changed in the fits.* AECI->TH (still the same 7 Claude models
+    with a METR run) flattened again because the new scale stretches the
+    top more than the bottom (Opus 4.6 +2.8, 3 Opus −0.4): slope 0.1726 ->
+    0.1548, i.e. 4.0 -> 4.5 AECI points per horizon doubling (R² 0.998 ->
+    0.997). ECI<->AECI: -9.29 + 1.0645*ECI -> -18.49 + 1.1363*ECI (n=10,
+    R² 0.993): ~1.14 AECI per ECI point at the top now. Pooled ECI->TH:
+    n 20 -> 19 (GPT-5.3 Codex lost its ECI, see below), R² 0.967 -> 0.976,
+    4.47 -> 4.77 ECI pts per doubling. Lab-adjusted: R² 0.984, n=19; the
+    Anthropic/OpenAI intercept ratio fell ~1.5x -> 1.31x (Google 1.51x).
+  - *What changed in the predictions (p50).* The frontier rose ~4–5 AECI
+    points but the fit flattened by about the same number of doublings, so
+    Claude predictions moved only +2–16%: Mythos 5.1 123.6 -> 126.7 h, Opus 5
+    74.4 -> 77.0 h, Mythos 5 66.1 -> 68.8 h, Opus 5.5 153.1 -> 177.0 h (it
+    rose most, +5.4 AECI). Fable 5.1 (implied AECI) 88.1 -> 101.1 h. Non-Claude
+    predictions rose with Epoch's refit: GPT-6 Astra 38.8 -> 48.3 h.
+  - *Claude Mythos 5.2* (dated Nov 9 2026, the card date per the owner; the
+    card's chart plots it ~Oct 1, its internal release): AECI 177.12
+    measured -> **254 h p50 / 33 h p80**. No public ECI (implied 172.14). It
+    joins the AECI frontier and becomes the anchored-trend point in all
+    three views. METR tested a stronger pre-release snapshot (§2.3.6) but the
+    card reports no horizon, so the ledger row is still event-based.
+  - *Claude Fable 5.2*: no Epoch ECI yet and no AECI (the card's point is
+    Mythos 5.2), so it has no data to plot. It is in MODELS keyed on "Claude
+    Fable 5.2" and appears automatically, routed like Fable 5.1, once Epoch
+    publishes it.
+  - *New non-Anthropic models.* One per lab release, matching how GPT-6
+    Astra (not Sol/Luna) and GPT-5.6 Sol (not Terra/Luna) were chosen: the
+    top-ECI model of the release. GPT-6.1 Sol (Sep 29; 168.94; openai
+    lab-adjusted) -> 47.4 h p50; Gemini 4 Argon (Sep 30; 166.45; limited
+    access; google lab-adjusted) -> 28.4 h p50. Lower tiers (GPT-6 Sol/Luna,
+    GPT-6.1 Terra), and labs not on the chart (Meta's Muse Wonder 162.02,
+    xAI) were left out. Neither new model sets the ECI frontier (GPT-6
+    Astra's 169.07 is still the measured record).
+  - *GPT-5.3 Codex lost its ECI* (no row in the Nov 9 file), so it is now
+    "estimated from TH" like Codex Max and drops out of the ECI fits. Its
+    MODELS key stays, so it returns if Epoch restores it.
+  - *Frontier trends* (chart's 2024+ running-max OLS): AECI 18.0 -> 20.6
+    pts/yr (n=12 -> 13, Mythos 5.2 joins); ECI 15.1 -> 16.2 pts/yr (n=15 ->
+    14: GPT-5.3 Codex leaves with its ECI, Opus 5.5's 168.36 is now below
+    Astra's 169.07 and drops off, and Opus 4.6 — no longer behind Codex —
+    rejoins). The
+    card's own fits: 15.3/yr breaking to 28.7/yr at Oct 2025 (1.88x, 95% CI
+    1.62–2.28x), or 16.2/yr with a +8.8 jump at Mythos Preview; both include
+    its internal model.
 - **METR inside the ECI (checked Oct 4 2026): measured, small, left alone.**
   Epoch's index takes METR Time Horizons' average task score as one of its
   60 benchmarks, so every METR-tested model's public ECI partly encodes the
@@ -246,8 +327,16 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   ~1% effect, so the published ECI stays. Re-check on refreshes: if METR's
   weight in the index grows (it is 1 of 4–30 benchmarks per model today),
   this can stop being negligible.
-- **METR-tested models still without an ECI.** GPT-4 1106 and GPT-5.1 Codex
-  Max stay "estimated from TH". Codex Max has no row in the Oct 4 file
+  *Nov 9 2026 re-check: could not be reproduced faithfully.* The same
+  re-derivation (per-model fit of performance = sigmoid(slope·(ECI − EDI)))
+  now misses Epoch's published scores by a mean ~0.9 points (max ~10), not
+  0.03, and taking the best model version per model is worse — Epoch's
+  aggregation changed with the per-model format and isn't documented in the
+  zip. Indicative only: dropping the METR row moves the METR-tested models
+  by -0.45 (GPT-4) to +0.21 (3 Opus), most <0.15, so still small. Fixing the
+  reproduction is an open item.
+- **METR-tested models still without an ECI.** GPT-4 1106, GPT-5.1 Codex
+  Max and (since Nov 9 2026) GPT-5.3 Codex are "estimated from TH". Codex Max has no row in the Oct 4 file
   (the Aug 2 one had 149.96). Epoch's "GPT-4 Turbo (Nov 2023)" (126.47)
   pools three API versions — 1106-preview, 0125-preview and gpt-4-turbo —
   so equating it with METR's 1106 run is a judgement call; measured effect
@@ -372,7 +461,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   means Mythos 5.1 in all three views: its predicted horizon (TH), its imputed
   ECI (163.64, above Fable 5's measured 161.55) and its measured AECI. Since
   Oct 4 it is Opus 5.5 in all three views (predicted TH, measured ECI and
-  AECI). With "show tested models only" on, derived points are hidden
+  AECI). Since Nov 9 it is Mythos 5.2 in all three views (predicted TH,
+  imputed ECI 172.14, measured AECI). With "show tested models only" on, derived points are hidden
   and the anchor reverts to the newest measured point.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold covers
@@ -494,9 +584,13 @@ plain fetchers on
   the Oct 2026 format change); ECI mode could draw whiskers from them. Not
   wired in yet.
 - The "Pin trend to 13.5/yr (system card)" toggle quotes an older card's
-  rate. The current (Opus 5.5) card fits 14.7/yr with a one-time +5.9 jump,
-  or 14.4 -> 22.2/yr with a Sep 2025 break; which (if any) the pin should
-  track is an open call.
+  rate. The Opus 5.5 card fit 14.7/yr with a one-time +5.9 jump (or 14.4 ->
+  22.2/yr with a Sep 2025 break); the current Fable 5.2 card fits 16.2/yr +
+  8.8 jump, or 15.3 -> 28.7/yr with an Oct 2025 break, and now prefers the
+  slope change. Which (if any) the pin should track is an open call.
+- Re-derive Epoch's Nov 2026 ECI scores from `processed_data_for_eci.csv`
+  (see "METR inside the ECI") so the METR-circularity check is measured
+  again rather than indicative.
 - CLI sensitivity switches (`--drop-reward-hacked`, `--with-gpt35`) affect
   the report only, not the generated chart arrays (which always use the
   default fits).
