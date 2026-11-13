@@ -132,6 +132,9 @@ MODELS = {
     # open weights), so it is NOT an open-weights reference point. Same routing
     # as those, though: no METR-tested Moonshot model, hence the pooled ECI fit.
     "Kimi K3":                 (None,                                 "Kimi K3",                          "moonshot"),
+    # Kimi K3.1 Pro: top-ECI model of Moonshot's next release (same rule as
+    # GPT-6.1 Sol / Gemini 4 Argon); pooled ECI fit, like K3.
+    "Kimi K3.1 Pro":           (None,                                 "Kimi K3.1 Pro",                    "moonshot"),
     # Chart models with a METR result but no published index: their ECI/AECI
     # are estimated from the p50 horizon (inverted ECI fit) for display only
     # and never enter any fit.
@@ -181,6 +184,7 @@ PREDICTED_DATES = {
     "DeepSeek-R1":           "2025-01-20",
     "GLM-5.2":               "2026-06-16",
     "Kimi K3":               "2026-07-16",
+    "Kimi K3.1 Pro":         "2026-10-23",
 }
 HTML = os.path.join(HERE, "..", "index.html")
 

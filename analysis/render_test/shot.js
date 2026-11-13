@@ -290,9 +290,9 @@ const LOCAL = {
 
   // "Trend from <last frontier point>" on the main chart's trend tooltips.
   // Re-enable derived points first: the anchor may be predicted/imputed (the
-  // deliberate special case), so with everything shown TH anchors on Mythos
-  // 5.2's predicted horizon, and ECI on Mythos 5.2's imputed 172.14 (newest,
-  // and above GPT-6 Astra's measured 169.07).
+  // deliberate special case), so with everything shown TH anchors on Fable
+  // 5.2's predicted horizon (same day as Mythos 5.2, higher), and ECI on
+  // Fable 5.2's measured 173.44 (newest, and the ECI record).
   await page.getByText('Show tested models only').click();
   await page.waitForTimeout(600);
   await page.getByText('METR Time Horizon Trends').scrollIntoViewIfNeeded();
@@ -300,15 +300,15 @@ const LOCAL = {
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300); // extrapolation region, right of every dot
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.2')))
-    failures.push('TH tooltip: anchored-trend reading missing (want predicted Mythos 5.2 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Fable 5.2')))
+    failures.push('TH tooltip: anchored-trend reading missing (want predicted Fable 5.2 anchor)');
   await page.screenshot({ path: 'chart_th_anchored.png' });
   await page.getByRole('button', { name: 'ECI', exact: true }).click();
   await page.waitForTimeout(800);
   await page.mouse.move(750, 300);
   await page.waitForTimeout(600);
-  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Mythos 5.2')))
-    failures.push('ECI tooltip: anchored-trend reading missing (want imputed Mythos 5.2 anchor)');
+  if (!await page.evaluate(() => document.body.innerText.includes('Trend from Fable 5.2')))
+    failures.push('ECI tooltip: anchored-trend reading missing (want measured Fable 5.2 anchor)');
 
   // ── Mobile: pinch zoom must stay continuous across a multi-step gesture ──
   // (regression test for the one-step-pinch bug: gesture state used to reset

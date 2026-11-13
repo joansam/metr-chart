@@ -57,3 +57,15 @@ vintage,series,entity,target_date,predicted,unit,actual,actual_date,note
 2026-11-09,th_p80,Mythos/Fable 5 (launch),,9.2,hours,,,"re-prediction on the Fable 5.2 card's AECI vintage (Mythos 5 164.49 -> 168.68); earlier rows stand"
 2026-11-09,th_p50,GPT-6 Astra,,48.3,hours,,,"re-prediction on Nov 2026 Epoch refresh (ECI 166.51 -> 169.07; openai lab-adjusted fit); earlier row stands"
 2026-11-09,th_p80,GPT-6 Astra,,8.4,hours,,,"re-prediction on Nov 2026 Epoch refresh (ECI 166.51 -> 169.07; openai lab-adjusted fit); earlier row stands"
+2026-11-13,th_p50,Fable 5.2,,307.3,hours,,,"implied-AECI prediction (Epoch ECI 173.44 -> AECI 178.3, Fable 5.2 card vintage); event-based"
+2026-11-13,th_p80,Fable 5.2,,39.3,hours,,,"implied-AECI prediction (Epoch ECI 173.44 -> AECI 178.3, Fable 5.2 card vintage); event-based"
+2026-11-13,th_p50,Kimi K3.1 Pro,,16.1,hours,,,pooled ECI-fit prediction (Epoch ECI 161.37; no moonshot METR data); event-based
+2026-11-13,th_p80,Kimi K3.1 Pro,,2.9,hours,,,pooled ECI-fit prediction (Epoch ECI 161.37; no moonshot METR data); event-based
+2026-11-13,th_p50,Fable 5.1,,99.5,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 166.90 -> 166.99); earlier rows stand"
+2026-11-13,th_p80,Fable 5.1,,13.2,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 166.90 -> 166.99); earlier rows stand"
+2026-11-13,th_p50,GPT-6 Astra,,47.1,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 169.07 -> 169.00); earlier rows stand"
+2026-11-13,th_p80,GPT-6 Astra,,8.2,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 169.07 -> 169.00); earlier rows stand"
+2026-11-13,th_p50,GPT-6.1 Sol,,43.7,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 168.94 -> 168.48); earlier row stands"
+2026-11-13,th_p80,GPT-6.1 Sol,,7.6,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 168.94 -> 168.48); earlier row stands"
+2026-11-13,th_p50,Gemini 4 Argon,,28.2,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 166.45 -> 166.48); earlier row stands"
+2026-11-13,th_p80,Gemini 4 Argon,,6.3,hours,,,"re-prediction on Nov 13 Epoch refresh (ECI 166.45 -> 166.48); earlier row stands"

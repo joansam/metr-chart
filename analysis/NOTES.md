@@ -12,7 +12,7 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
 ## Data provenance
 
 - `../benchmark_results_1_1 (5).yaml` — METR-Horizon-v1.1 ground truth.
-- `data/eci_scores.csv` — Epoch AI Benchmarking Hub download (Nov 9 2026,
+- `data/eci_scores.csv` — Epoch AI Benchmarking Hub download (Nov 13 2026,
   CC-BY 4.0, cite epoch.ai/benchmarks), copied verbatim from the
   `epoch_capabilities_index/eci_scores.csv` member of
   `https://epoch.ai/data/benchmark_data.zip` (the "LLM Benchmark Data" link on
@@ -35,6 +35,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   Astra 166.51 -> 169.07, Fable 5.1 +2.1, Fable 5 +2.0, Opus 5 +1.5, Opus 5.5
   +1.0; older models mostly within ±0.5), so never treat a refresh as a
   no-op: regenerate the arrays and re-check the stats quoted in BASIS_DOC.
+  Nov 9 -> Nov 13 was a light refit (max 0.65, frontier models ≤0.5;
+  GPT-6.1 Sol 168.94 -> 168.48) that added Fable 5.2.
   Epoch also *drops* rows on a refresh: the Nov 9 file has no GPT-5.3 Codex
   (and ~30 smaller models), the same way Codex Max vanished by Oct 4.
 - `data/ai_companies_revenue_reports.csv` / `data/ai_companies_funding_rounds.csv`
@@ -288,17 +290,28 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
     joins the AECI frontier and becomes the anchored-trend point in all
     three views. METR tested a stronger pre-release snapshot (§2.3.6) but the
     card reports no horizon, so the ledger row is still event-based.
-  - *Claude Fable 5.2*: no Epoch ECI yet and no AECI (the card's point is
-    Mythos 5.2), so it has no data to plot. It is in MODELS keyed on "Claude
-    Fable 5.2" and appears automatically, routed like Fable 5.1, once Epoch
-    publishes it.
+  - *Claude Fable 5.2*: Epoch published its ECI by Nov 13 — 173.44 [169.93,
+    177.49], dated Nov 9 — and it was added exactly as planned: ECI-only
+    row, implied AECI 178.3 -> **307 h p50 / 39 h p80**. That is above Mythos
+    5.2's 254 h because Fable's public ECI maps to an AECI 1.2 above Mythos
+    5.2's measured 177.12 (well inside its CI). The two are different
+    deployment variants, kept apart like every earlier Mythos/Fable pair,
+    so neither number is adjusted toward the other. Fable 5.2 is a measured
+    ECI record, so the ECI frontier trend goes 16.2 -> 16.6 pts/yr (n=14 ->
+    15); its AECI is imputed, so the AECI trend is unchanged at 20.6. It
+    also takes over the anchored-trend point in the TH and ECI views
+    (newest, and higher than Mythos 5.2 on the same day).
   - *New non-Anthropic models.* One per lab release, matching how GPT-6
     Astra (not Sol/Luna) and GPT-5.6 Sol (not Terra/Luna) were chosen: the
     top-ECI model of the release. GPT-6.1 Sol (Sep 29; 168.94; openai
     lab-adjusted) -> 47.4 h p50; Gemini 4 Argon (Sep 30; 166.45; limited
     access; google lab-adjusted) -> 28.4 h p50. Lower tiers (GPT-6 Sol/Luna,
     GPT-6.1 Terra), and labs not on the chart (Meta's Muse Wonder 162.02,
-    xAI) were left out. Neither new model sets the ECI frontier (GPT-6
+    xAI) were left out. The Nov 13 refresh added, by the same rule, Kimi
+    K3.1 Pro (Oct 23; 161.37; pooled fit, no Moonshot METR data) -> 16.1 h
+    p50. Gemini 4 Carbon (169.76) is listed by Epoch as *unreleased*, so
+    like the card's internal model it is out of the chart's scope until it
+    ships. Neither new model sets the ECI frontier (GPT-6
     Astra's 169.07 is still the measured record).
   - *GPT-5.3 Codex lost its ECI* (no row in the Nov 9 file), so it is now
     "estimated from TH" like Codex Max and drops out of the ECI fits. Its
@@ -462,7 +475,8 @@ reproduced exactly by `eci_conversions.py` / `aeci_metr_conversion.py`.
   ECI (163.64, above Fable 5's measured 161.55) and its measured AECI. Since
   Oct 4 it is Opus 5.5 in all three views (predicted TH, measured ECI and
   AECI). Since Nov 9 it is Mythos 5.2 in all three views (predicted TH,
-  imputed ECI 172.14, measured AECI). With "show tested models only" on, derived points are hidden
+  imputed ECI 172.14, measured AECI); since Nov 13, Fable 5.2 in the TH and
+  ECI views (predicted TH, measured ECI 173.44). With "show tested models only" on, derived points are hidden
   and the anchor reverts to the newest measured point.
 - **Finance-chart colors**: labs shared with the capability chart keep their
   color (same entity, same hue, both charts; the open-weights gold covers
